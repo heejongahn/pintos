@@ -154,17 +154,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   if (!list_empty (&waiting_timer_list)) {
     while (curr != list_end(&waiting_timer_list)) {
-      // printf("%x %x\n", curr, curr->next);
       curr_thread = list_entry (curr, struct thread, elem);
       curr = list_next(curr);
 
-      //printf("remaining tick: %d\n", curr_thread->remaining_ticks);
       if (curr_thread->alarm_ticks <= ticks) {
         list_remove(curr->prev);
         thread_unblock(curr_thread);
-        //printf("%d Awakes\n", curr_thread->tid);
-      //  printf("%s\n", "unblock");
-      //  printf("%s\n", "tick minus");
       }
     }
   }
