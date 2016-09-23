@@ -45,6 +45,14 @@ struct kernel_thread_frame
     void *aux;                  /* Auxiliary data for function. */
   };
 
+static bool thread_priority_less(const struct list_elem *a,
+    const struct list_elem *b, void *aux) {
+  int priority_a = list_entry(a, struct thread, elem)->priority;
+  int priority_b = list_entry(b, struct thread, elem)->priority;
+
+  return (priority_a > priority_b);
+}
+
 /* Statistics. */
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
@@ -235,7 +243,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered (&ready_list, &t->elem, &thread_priority_less, 0);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -303,8 +311,9 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (curr != idle_thread)
-    list_push_back (&ready_list, &curr->elem);
+  if (curr != idle_thread) {
+    list_insert_ordered (&ready_list, &curr->elem, &thread_priority_less, 0);
+  }
   curr->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
