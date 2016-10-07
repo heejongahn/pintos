@@ -216,8 +216,8 @@ load (char *file_name, void (**eip) (void), void **esp)
   int i;
 
   /* Make another copy for setup_stack */
-  char *fn_copy = palloc_get_page (0);
-  strlcpy (fn_copy, file_name, PGSIZE);
+  char *cmdline = palloc_get_page (0);
+  strlcpy (cmdline, file_name, PGSIZE);
 
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
@@ -309,7 +309,7 @@ load (char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp, fn_copy))
+  if (!setup_stack (esp, cmdline))
     goto done;
 
   /* Start address. */
