@@ -62,7 +62,6 @@ start_process (void *f_name)
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
   if (!success)
     thread_exit ();
 
@@ -441,48 +440,57 @@ setup_stack (void **esp, char *cmdline)
   bool success = false;
   char *token, *save_ptr;
 
-  char **argv_addr = palloc_get_page(0);
+  char **argv_addr = palloc_get_page(PAL_ZERO);
   int argc = 0;
-  int byte_padding, i;
+  int i, byte_padding, token_length;
 
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
+        *esp = PHYS_BASE;
+
         /* Argument Parsing */
         for (token = strtok_r (cmdline, " ", &save_ptr); token != NULL;
             token = strtok_r (NULL, " ", &save_ptr)) {
-          *esp =- strlen (token);
-          strlcpy (*esp, token, strlen (token));
+          token_length = strlen (token) + 1;
+          *esp = *esp - token_length;
+          printf("argv[%d] should point to, %s, which is at %p, length %d\n", argc, token, *esp, token_length);
+          strlcpy (*esp, token, token_length);
           argv_addr[argc] = *esp;
           argc++;
         }
 
         /* Word_align */
-        if (byte_padding = (((int) *esp) % 4)) {
-          *esp -= byte_padding;
-          memset(*esp, 0, byte_padding);
-        }
+        if ((byte_padding = ((uint32_t) *esp) % 4))
+          *esp = *esp - byte_padding;
+
+        printf("Word aligned: stack pointer is at %p\n", *esp);
 
         /* Argv elements */
-        *esp -= sizeof (char *);
-        memset(*esp, 0, sizeof (char *));
+        *esp = *esp - sizeof (char *);
+        printf("argv[%d] is at %p, value %x\n", argc, *esp, *(char *)*esp);
 
         for (i = (argc-1); i >= 0; i--) {
-          *esp -= sizeof (char *);
-          *(char *)*esp = argv_addr[i];
+          *esp = *esp - sizeof (char *);
+          memset(*esp, argv_addr[i], sizeof (char*));
+          printf("argv[%d] is at %p, value %p\n", i, *esp, argv_addr[i]);
         }
 
         /* Argv, argc, return addr */
-        *esp -= sizeof (char *);
-        * (char **) *esp = (*esp + sizeof (char *));
+        *esp = *esp - sizeof (char *);
+        memset(*esp, (*esp + sizeof (char *)), sizeof (char*));
+        printf("argv is at %p, value %p\n", *esp, *esp + sizeof (char *));
 
-        *esp -= sizeof (int);
-        * (int *) *esp = argc;
+        *esp = *esp - sizeof (int);
+        memset(*esp, argc, sizeof (int));
+        printf("argc is at %p, value %d\n", *esp, argc);
 
-        *esp -= sizeof (void *);
-        memset (*esp, 0, sizeof (void *));
+        *esp = *esp - sizeof (void *);
+        printf("return addr is at %p, value %x\n", *esp, *(int *)*esp);
+        printf ("Final stack pointer is %p\n", *esp);
+        hex_dump(0, *esp, (PHYS_BASE - *esp), true);
       }
       else
         palloc_free_page (kpage);
