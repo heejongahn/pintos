@@ -88,7 +88,7 @@ start_process (void *f_name)
 int
 process_wait (tid_t child_tid UNUSED)
 {
-  return -1;
+  while(1);
 }
 
 /* Free the current process's resources. */
@@ -214,6 +214,7 @@ load (char *file_name, void (**eip) (void), void **esp)
   off_t file_ofs;
   bool success = false;
   int i;
+  char *save_ptr;
 
   /* Make another copy for setup_stack */
   char *cmdline = palloc_get_page (0);
@@ -226,7 +227,7 @@ load (char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Make file_name actually refer to file name... */
-  file_name = strtok_r (file_name, " ", NULL);
+  file_name = strtok_r (file_name, " ", &save_ptr);
 
   /* Open executable file. */
   file = filesys_open (file_name);
