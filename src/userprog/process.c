@@ -71,6 +71,7 @@ start_process (void *f_name)
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
+  printf("%p\n", if_.esp);
   asm volatile ("movl %0, %%esp; jmp intr_exit" : : "g" (&if_) : "memory");
   NOT_REACHED ();
 }
@@ -487,8 +488,6 @@ setup_stack (void **esp, char *cmdline)
         memset(*esp, argc, sizeof (int));
         printf("argc is at %p, value %d\n", *esp, argc);
 
-        *esp = *esp - sizeof (void *);
-        printf("return addr is at %p, value %x\n", *esp, *(int *)*esp);
         printf ("Final stack pointer is %p\n", *esp);
         hex_dump(0, *esp, (PHYS_BASE - *esp), true);
       }
