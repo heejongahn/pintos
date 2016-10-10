@@ -4,6 +4,7 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/malloc.h"
 
 static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
@@ -18,14 +19,52 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f)
 {
-  void *esp = f->esp;
+  uint32_t *esp = f->esp;
   uint32_t *syscall_nr;
+  int argc, i;
+  void **argv;
 
-  get_user(esp, syscall_nr, 1);
-  hex_dump(0, esp, PHYS_BASE-esp, true);
-  printf ("%p %u\n", esp, *syscall_nr);
+  get_user(esp, syscall_nr, 4);
+  printf("System call number: %d\n", *syscall_nr);
+  switch (*syscall_nr) {
+    case SYS_HALT:
+      argc = 0;
+      break;
+    case SYS_EXIT:
+    case SYS_EXEC:
+    case SYS_WAIT:
+    case SYS_REMOVE:
+    case SYS_OPEN:
+    case SYS_FILESIZE:
+    case SYS_TELL:
+    case SYS_CLOSE:
+      argc = 1;
+      break;
+    case SYS_CREATE:
+    case SYS_SEEK:
+      argc = 2;
+      break;
+    case SYS_READ:
+    case SYS_WRITE:
+      argc = 3;
+      break;
+    default:
+      printf("Unavailable system call for now\n");
+      return;
+  }
+
+  printf("System call argc: %d\n", argc);
+
+  argv = malloc (argc * 4);
+  memset (argv, 0, argc * 4);
+
+  for (i=0; i<argc; i++) {
+    get_user((esp + i + 1), &argv[i], 4);
+    printf("System call argument #%d: %x\n", i, argv[i]);
+  }
 
   printf ("system call!\n");
+  free (argv);
   thread_exit ();
 }
 
