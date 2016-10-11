@@ -475,17 +475,17 @@ setup_stack (void **esp, char *cmdline)
 
         for (i = (argc-1); i >= 0; i--) {
           *esp = *esp - sizeof (char *);
-          memset(*esp, argv_addr[i], sizeof (char*));
+          *(unsigned *)*esp = argv_addr[i];
           printf("argv[%d] is at %p, value %p\n", i, *esp, argv_addr[i]);
         }
 
         /* Argv, argc, return addr */
         *esp = *esp - sizeof (char *);
-        memset(*esp, (*esp + sizeof (char *)), sizeof (char*));
+        *(unsigned *)*esp = *esp + sizeof (char *);
         printf("argv is at %p, value %p\n", *esp, *esp + sizeof (char *));
 
         *esp = *esp - sizeof (int);
-        memset(*esp, argc, sizeof (int));
+        *(int *)*esp = argc;
         printf("argc is at %p, value %d\n", *esp, argc);
 
         printf ("Final stack pointer is %p\n", *esp);
