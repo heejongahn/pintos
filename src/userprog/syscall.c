@@ -10,22 +10,37 @@ static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
+typedef void (*handler) (void *);
+
 static void halt (void *argv);
 static void exit (void *argv);
-static pid_t exec (void *argv);
-static int wait (void *argv);
-static bool create (void *argv);
-static bool remove (void *argv);
-static int open (void *argv);
-static int filesize (void *argv);
-static int read (void *argv);
-static int write (void *argv);
+static void exec (void *argv);
+static void wait (void *argv);
+static void create (void *argv);
+static void remove (void *argv);
+static void open (void *argv);
+static void filesize (void *argv);
+static void read (void *argv);
+static void write (void *argv);
 static void seek (void *argv);
-static unsigned tell (void *argv);
+static void tell (void *argv);
 static void close (void *argv);
 
-static void *handlers[13] = {halt, exit, exec, wait, create, remove, open,
-  filesize, read, write, seek, tell, close};
+static handler handlers[13] = {
+  &halt,
+  &exit,
+  &exec,
+  &wait,
+  &create,
+  &remove,
+  &open,
+  &filesize,
+  &read,
+  &write,
+  &seek,
+  &tell,
+  &close
+};
 
 void
 syscall_init (void)
@@ -126,44 +141,44 @@ exit (void *argv) {
   return;
 }
 
-static pid_t
+static void
 exec (void *argv) {
-  return 1;
+  return;
 }
 
-static int
+static void
 wait (void *argv) {
-  return 1;
+  return;
 }
 
-static bool
+static void
 create (void *argv) {
-  return true;
+  return;
 }
 
-static bool
+static void
 remove (void *argv) {
-  return true;
+  return;
 }
 
-static int
+static void
 open (void *argv) {
-  return 1;
+  return;
 }
 
-static int
+static void
 filesize (void *argv) {
-  return 1;
+  return;
 }
 
-static int
+static void
 read (void *argv) {
-  return 1;
+  return;
 }
 
-static int
+static void
 write (void *argv) {
-  return 1;
+  return;
 }
 
 static void
@@ -171,9 +186,9 @@ seek (void *argv) {
   return;
 }
 
-static unsigned
+static void
 tell (void *argv) {
-  return 0;
+  return;
 }
 
 static void
