@@ -10,6 +10,23 @@ static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
+static void halt (void *argv);
+static void exit (void *argv);
+static pid_t exec (void *argv);
+static int wait (void *argv);
+static bool create (void *argv);
+static bool remove (void *argv);
+static int open (void *argv);
+static int filesize (void *argv);
+static int read (void *argv);
+static int write (void *argv);
+static void seek (void *argv);
+static unsigned tell (void *argv);
+static void close (void *argv);
+
+static void *handlers[13] = {halt, exit, exec, wait, create, remove, open,
+  filesize, read, write, seek, tell, close};
+
 void
 syscall_init (void)
 {
@@ -96,4 +113,70 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
   }
 
   memcpy (uaddr, copy_from, size);
+}
+
+
+static void
+halt (void *argv) {
+  return;
+}
+
+static void
+exit (void *argv) {
+  return;
+}
+
+static pid_t
+exec (void *argv) {
+  return 1;
+}
+
+static int
+wait (void *argv) {
+  return 1;
+}
+
+static bool
+create (void *argv) {
+  return true;
+}
+
+static bool
+remove (void *argv) {
+  return true;
+}
+
+static int
+open (void *argv) {
+  return 1;
+}
+
+static int
+filesize (void *argv) {
+  return 1;
+}
+
+static int
+read (void *argv) {
+  return 1;
+}
+
+static int
+write (void *argv) {
+  return 1;
+}
+
+static void
+seek (void *argv) {
+  return;
+}
+
+static unsigned
+tell (void *argv) {
+  return 0;
+}
+
+static void
+close (void *argv) {
+  return;
 }
