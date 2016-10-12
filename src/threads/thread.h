@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -95,12 +96,18 @@ struct thread
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
+    struct list_elem user_elem;     /* Elem for the user programs list */
     uint32_t *pagedir;                  /* Page directory. */
+    int exit_code;                      /* Exit code of program */
+    struct semaphore exiting;
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+struct list user_list;
+struct lock user_modify_lock;
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.

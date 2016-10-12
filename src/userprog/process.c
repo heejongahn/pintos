@@ -11,6 +11,7 @@
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "threads/thread.h"
 #include "threads/flags.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
@@ -54,6 +55,8 @@ start_process (void *f_name)
   struct intr_frame if_;
   bool success;
 
+  sema_init(&thread_current()->exiting, 0);
+
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
   if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
@@ -64,6 +67,11 @@ start_process (void *f_name)
   /* If load failed, quit. */
   if (!success)
     thread_exit ();
+
+  // printf("Pushing elem to user_list.\n");
+  lock_acquire(&user_modify_lock);
+  list_push_front(&user_list, &thread_current()->user_elem);
+  lock_release(&user_modify_lock);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -85,9 +93,30 @@ start_process (void *f_name)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED)
+process_wait (tid_t child_tid)
 {
-  while(1);
+  struct thread *child = NULL;
+  struct list_elem *curr;
+
+  // printf("Invoking process_wait for thread %d.\n", child_tid);
+  while (!child) {
+    for (curr=list_begin(&user_list); curr!=list_tail(&user_list);
+        curr=list_next(curr)) {
+      if (list_entry(curr, struct thread, user_elem)->tid == child_tid) {
+        child = list_entry(curr, struct thread, user_elem);
+        break;
+      }
+    }
+  }
+
+  sema_down(&child->exiting);
+
+  lock_acquire(&user_modify_lock);
+  list_remove(curr);
+  lock_release(&user_modify_lock);
+
+  // printf("Ending wating for thread %d.\n", child->tid);
+  return child->exit_code;
 }
 
 /* Free the current process's resources. */
@@ -224,6 +253,7 @@ load (char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL)
     goto done;
   process_activate ();
+
 
   /* Make file_name actually refer to file name... */
   file_name = strtok_r (file_name, " ", &save_ptr);
@@ -456,7 +486,7 @@ setup_stack (void **esp, char *cmdline)
             token = strtok_r (NULL, " ", &save_ptr)) {
           token_length = strlen (token) + 1;
           *esp = *esp - token_length;
-          printf("argv[%d] should point to, %s, which is at %p, length %d\n", argc, token, *esp, token_length);
+          // printf("argv[%d] should point to, %s, which is at %p, length %d\n", argc, token, *esp, token_length);
           strlcpy (*esp, token, token_length);
           argv_addr[argc] = *esp;
           argc++;
@@ -466,30 +496,30 @@ setup_stack (void **esp, char *cmdline)
         if ((byte_padding = ((uint32_t) *esp) % 4))
           *esp = *esp - byte_padding;
 
-        printf("Word aligned: stack pointer is at %p\n", *esp);
+        // printf("Word aligned: stack pointer is at %p\n", *esp);
 
         /* Argv elements */
         *esp = *esp - sizeof (char *);
-        printf("argv[%d] is at %p, value %x\n", argc, *esp, *(char *)*esp);
+        // printf("argv[%d] is at %p, value %x\n", argc, *esp, *(char *)*esp);
 
         for (i = (argc-1); i >= 0; i--) {
           *esp = *esp - sizeof (char *);
           *(unsigned *)*esp = argv_addr[i];
-          printf("argv[%d] is at %p, value %p\n", i, *esp, argv_addr[i]);
+          // printf("argv[%d] is at %p, value %p\n", i, *esp, argv_addr[i]);
         }
 
         /* Argv, argc, return addr */
         *esp = *esp - sizeof (char *);
         *(unsigned *)*esp = *esp + sizeof (char *);
-        printf("argv is at %p, value %p\n", *esp, *esp + sizeof (char *));
+        // printf("argv is at %p, value %p\n", *esp, *esp + sizeof (char *));
 
         *esp = *esp - sizeof (int);
         *(int *)*esp = argc;
-        printf("argc is at %p, value %d\n", *esp, argc);
+        // printf("argc is at %p, value %d\n", *esp, argc);
 
         *esp = *esp - sizeof (int);
-        printf ("Final stack pointer is %p\n", *esp);
-        hex_dump(0, *esp, (PHYS_BASE - *esp), true);
+        // printf ("Final stack pointer is %p\n", *esp);
+        // hex_dump(0, *esp, (PHYS_BASE - *esp), true);
       }
       else
         palloc_free_page (kpage);

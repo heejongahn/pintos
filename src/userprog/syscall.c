@@ -59,8 +59,8 @@ syscall_handler (struct intr_frame *f)
   void **argv;
 
   get_user(esp, &syscall_nr, 4);
-  printf("System call number: %d\n", syscall_nr);
-  printf("Current esp: %p\n", esp);
+  // printf("System call number: %d\n", syscall_nr);
+  // printf("Current esp: %p\n", esp);
 
   /*
   while (esp < PHYS_BASE) {
@@ -97,14 +97,14 @@ syscall_handler (struct intr_frame *f)
   }
   esp += 1;
 
-  printf("System call argc: %d\n", argc);
+  // printf("System call argc: %d\n", argc);
 
   argv = malloc (argc * 4);
   memset (argv, 0, argc * 4);
 
   for (i=0; i<argc; i++) {
     get_user((esp+i), &(argv[i]), 4);
-    printf("System call argument #%d(at %p): %p\n", i, (esp+i), (argv[i]));
+    // printf("System call argument #%d(at %p): %p\n", i, (esp+i), (argv[i]));
   }
 
   // hex_dump(0, esp, PHYS_BASE - (unsigned) esp, true);
@@ -156,8 +156,10 @@ halt (void **argv, uint32_t *eax) {
 
 static void
 exit (void **argv, uint32_t *eax) {
-  int exit_code = (int) argv[0];
-  *eax = exit_code;
+  struct thread *t = thread_current ();
+  t->exit_code = (int) argv[0];
+  sema_up(&t->exiting);
+  //printf("thread %d is now exiting: exit code %d.\n", t->tid, t->exit_code);
   return;
 }
 
