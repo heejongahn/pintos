@@ -10,21 +10,21 @@ static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
-typedef void (*handler) (void *);
+typedef void (*handler) (void *, uint32_t *);
 
-static void halt (void *argv);
-static void exit (void *argv);
-static void exec (void *argv);
-static void wait (void *argv);
-static void create (void *argv);
-static void remove (void *argv);
-static void open (void *argv);
-static void filesize (void *argv);
-static void read (void *argv);
-static void write (void *argv);
-static void seek (void *argv);
-static void tell (void *argv);
-static void close (void *argv);
+static void halt (void **argv, uint32_t *eax);
+static void exit (void **argv, uint32_t *eax);
+static void exec (void **argv, uint32_t *eax);
+static void wait (void **argv, uint32_t *eax);
+static void create (void **argv, uint32_t *eax);
+static void remove (void **argv, uint32_t *eax);
+static void open (void **argv, uint32_t *eax);
+static void filesize (void **argv, uint32_t *eax);
+static void read (void **argv, uint32_t *eax);
+static void write (void **argv, uint32_t *eax);
+static void seek (void **argv, uint32_t *eax);
+static void tell (void **argv, uint32_t *eax);
+static void close (void **argv, uint32_t *eax);
 
 static handler handlers[13] = {
   &halt,
@@ -52,13 +52,25 @@ static void
 syscall_handler (struct intr_frame *f)
 {
   uint32_t *esp = f->esp;
-  uint32_t *syscall_nr;
+  uint32_t *eax = &f->eax;
+  uint32_t syscall_nr;
+  void *return_addr;
   int argc, i;
   void **argv;
 
-  get_user(esp, syscall_nr, 4);
-  printf("System call number: %d\n", *syscall_nr);
-  switch (*syscall_nr) {
+  get_user(esp, &syscall_nr, 4);
+  printf("System call number: %d\n", syscall_nr);
+  printf("Return addr: %p\n", return_addr);
+  printf("Current esp: %p\n", esp);
+
+  /*
+  while (esp < PHYS_BASE) {
+    printf("%x\n", *esp);
+    esp++;
+  }
+  */
+
+  switch (syscall_nr) {
     case SYS_HALT:
       argc = 0;
       break;
@@ -84,6 +96,7 @@ syscall_handler (struct intr_frame *f)
       printf("Unavailable system call for now\n");
       return;
   }
+  esp += 1;
 
   printf("System call argc: %d\n", argc);
 
@@ -91,13 +104,14 @@ syscall_handler (struct intr_frame *f)
   memset (argv, 0, argc * 4);
 
   for (i=0; i<argc; i++) {
-    get_user((esp + i + 1), &argv[i], 4);
-    printf("System call argument #%d: %x\n", i, argv[i]);
+    get_user((esp+i), &(argv[i]), 4);
+    printf("System call argument #%d(at %p): %p\n", i, (esp+i), (argv[i]));
   }
 
-  printf ("system call!\n");
+  // hex_dump(0, esp, PHYS_BASE - (unsigned) esp, true);
+  (*handlers[syscall_nr]) (argv, eax);
   free (argv);
-  thread_exit ();
+  return;
 }
 
 // TODO: Unmapped virtual address check
@@ -132,66 +146,76 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
 
 
 static void
-halt (void *argv) {
+halt (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-exit (void *argv) {
+exit (void **argv, uint32_t *eax) {
+  thread_exit ();
   return;
 }
 
 static void
-exec (void *argv) {
+exec (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-wait (void *argv) {
+wait (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-create (void *argv) {
+create (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-remove (void *argv) {
+remove (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-open (void *argv) {
+open (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-filesize (void *argv) {
+filesize (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-read (void *argv) {
+read (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-write (void *argv) {
+write (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+  char *buf = (char *)argv[1];
+  unsigned size = (unsigned )argv[2];
+
+  if (fd == 1) {
+    putbuf(buf, size);
+  }
+
+  *eax = size;
   return;
 }
 
 static void
-seek (void *argv) {
+seek (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-tell (void *argv) {
+tell (void **argv, uint32_t *eax) {
   return;
 }
 
 static void
-close (void *argv) {
+close (void **argv, uint32_t *eax) {
   return;
 }
