@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -54,13 +55,11 @@ syscall_handler (struct intr_frame *f)
   uint32_t *esp = f->esp;
   uint32_t *eax = &f->eax;
   uint32_t syscall_nr;
-  void *return_addr;
   int argc, i;
   void **argv;
 
   get_user(esp, &syscall_nr, 4);
   printf("System call number: %d\n", syscall_nr);
-  printf("Return addr: %p\n", return_addr);
   printf("Current esp: %p\n", esp);
 
   /*
@@ -111,6 +110,11 @@ syscall_handler (struct intr_frame *f)
   // hex_dump(0, esp, PHYS_BASE - (unsigned) esp, true);
   (*handlers[syscall_nr]) (argv, eax);
   free (argv);
+
+  if (syscall_nr == SYS_EXIT) {
+    thread_exit();
+  }
+
   return;
 }
 
@@ -152,7 +156,8 @@ halt (void **argv, uint32_t *eax) {
 
 static void
 exit (void **argv, uint32_t *eax) {
-  thread_exit ();
+  int exit_code = (int) argv[0];
+  *eax = exit_code;
   return;
 }
 
