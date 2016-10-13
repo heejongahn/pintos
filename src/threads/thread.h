@@ -96,18 +96,16 @@ struct thread
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    struct list_elem user_elem;     /* Elem for the user programs list */
     uint32_t *pagedir;                  /* Page directory. */
     int exit_code;                      /* Exit code of program */
-    struct semaphore exiting;
+    struct semaphore exiting;           /* Semaphore for exit status */
+    struct list child_list;             /* List of children */
+    struct list_elem child_elem;        /* Elem for the child_list */
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
-struct list user_list;
-struct lock user_modify_lock;
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -121,7 +119,8 @@ void thread_tick (void);
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
-tid_t thread_create (const char *name, int priority, thread_func *, void *);
+tid_t thread_create (const char *name, int priority, thread_func *, void *,
+    struct thread *parent);
 
 void thread_block (void);
 void thread_unblock (struct thread *);

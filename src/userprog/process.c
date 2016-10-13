@@ -40,7 +40,8 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy,
+      thread_current());
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   return tid;
@@ -49,13 +50,11 @@ process_execute (const char *file_name)
 /* A thread function that loads a user process and makes it start
    running. */
 static void
-start_process (void *f_name)
+start_process (void *fn_copy)
 {
-  char *file_name = f_name;
   struct intr_frame if_;
   bool success;
-
-  sema_init(&thread_current()->exiting, 0);
+  char *file_name = (char *) fn_copy;
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
@@ -69,9 +68,6 @@ start_process (void *f_name)
     thread_exit ();
 
   // printf("Pushing elem to user_list.\n");
-  lock_acquire(&user_modify_lock);
-  list_push_front(&user_list, &thread_current()->user_elem);
-  lock_release(&user_modify_lock);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -96,25 +92,28 @@ int
 process_wait (tid_t child_tid)
 {
   struct thread *child = NULL;
+  struct list *child_list = &thread_current()->child_list;
   struct list_elem *curr;
 
+  bool found = false;
+
   // printf("Invoking process_wait for thread %d.\n", child_tid);
-  while (!child) {
-    for (curr=list_begin(&user_list); curr!=list_tail(&user_list);
-        curr=list_next(curr)) {
-      if (list_entry(curr, struct thread, user_elem)->tid == child_tid) {
-        child = list_entry(curr, struct thread, user_elem);
-        break;
-      }
+  for (curr=list_begin(child_list); curr!=list_tail(child_list);
+      curr=list_next(curr)) {
+    if (list_entry(curr, struct thread, child_elem)->tid == child_tid) {
+      child = list_entry(curr, struct thread, child_elem);
+      found = true;
+      break;
     }
+  }
+
+  if (!found) {
+    return -1;
   }
 
   sema_down(&child->exiting);
 
-  lock_acquire(&user_modify_lock);
   list_remove(curr);
-  lock_release(&user_modify_lock);
-
   // printf("Ending wating for thread %d.\n", child->tid);
   return child->exit_code;
 }
