@@ -489,7 +489,6 @@ setup_stack (void **esp, char *cmdline)
             token = strtok_r (NULL, " ", &save_ptr)) {
           token_length = strlen (token) + 1;
           *esp = *esp - token_length;
-          // printf("argv[%d] should point to, %s, which is at %p, length %d\n", argc, token, *esp, token_length);
           strlcpy (*esp, token, token_length);
           argv_addr[argc] = *esp;
           argc++;
@@ -499,30 +498,22 @@ setup_stack (void **esp, char *cmdline)
         if ((byte_padding = ((uint32_t) *esp) % 4))
           *esp = *esp - byte_padding;
 
-        // printf("Word aligned: stack pointer is at %p\n", *esp);
-
         /* Argv elements */
         *esp = *esp - sizeof (char *);
-        // printf("argv[%d] is at %p, value %x\n", argc, *esp, *(char *)*esp);
 
         for (i = (argc-1); i >= 0; i--) {
           *esp = *esp - sizeof (char *);
           *(unsigned *)*esp = argv_addr[i];
-          // printf("argv[%d] is at %p, value %p\n", i, *esp, argv_addr[i]);
         }
 
         /* Argv, argc, return addr */
         *esp = *esp - sizeof (char *);
         *(unsigned *)*esp = *esp + sizeof (char *);
-        // printf("argv is at %p, value %p\n", *esp, *esp + sizeof (char *));
 
         *esp = *esp - sizeof (int);
         *(int *)*esp = argc;
-        // printf("argc is at %p, value %d\n", *esp, argc);
 
         *esp = *esp - sizeof (int);
-        // printf ("Final stack pointer is %p\n", *esp);
-        // hex_dump(0, *esp, (PHYS_BASE - *esp), true);
       }
       else
         palloc_free_page (kpage);

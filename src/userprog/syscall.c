@@ -65,15 +65,6 @@ syscall_handler (struct intr_frame *f)
 
   memset (argv, 0, sizeof (void *) * 4);
   get_user(esp, &syscall_nr, 4);
-  // printf("System call number: %d\n", syscall_nr);
-  // printf("Current esp: %p\n", esp);
-
-  /*
-  while (esp < PHYS_BASE) {
-    printf("%x\n", *esp);
-  esp++;
-  }
-  */
 
   switch (syscall_nr) {
     case SYS_HALT:
@@ -103,14 +94,10 @@ syscall_handler (struct intr_frame *f)
   }
   esp += 1;
 
-  // printf("System call argc: %d\n", argc);
-
   for (i=0; i<argc; i++) {
     get_user((esp+i), &(argv[i]), 4);
-    // printf("System call argument #%d(at %p): %p\n", i, (esp+i), (argv[i]));
   }
 
-  // hex_dump(0, esp, PHYS_BASE - (unsigned) esp, true);
   (*handlers[syscall_nr]) (argv, eax);
 
   return;
