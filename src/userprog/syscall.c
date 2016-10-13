@@ -6,6 +6,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
+#include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
@@ -153,6 +154,7 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
 
 static void
 halt (void **argv, uint32_t *eax) {
+  power_off();
   return;
 }
 
@@ -177,11 +179,18 @@ wait (void **argv, uint32_t *eax) {
 
 static void
 create (void **argv, uint32_t *eax) {
+  char *file = (char *) argv[0];
+  unsigned initial_size = (unsigned) argv[1];
+
+  *eax = filesys_create(file, initial_size);
   return;
 }
 
 static void
 remove (void **argv, uint32_t *eax) {
+  char *name = (char *) argv[0];
+
+  *eax = filesys_remove(name);
   return;
 }
 
