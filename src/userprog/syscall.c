@@ -6,6 +6,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 #include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
@@ -163,7 +164,6 @@ exit (void **argv, uint32_t *eax) {
   struct thread *t = thread_current ();
   t->exit_code = (int) argv[0];
   sema_up(&t->exiting);
-  //printf("thread %d is now exiting: exit code %d.\n", t->tid, t->exit_code);
   return;
 }
 
@@ -182,7 +182,16 @@ create (void **argv, uint32_t *eax) {
   char *file = (char *) argv[0];
   unsigned initial_size = (unsigned) argv[1];
 
+  int *exit_argv[1];
+  exit_argv[0] = -1;
+
+  if ((file == NULL) || is_kernel_vaddr(file)) {
+    return exit(exit_argv, eax);
+  }
+
+  lock_acquire (&filesys_lock);
   *eax = filesys_create(file, initial_size);
+  lock_release (&filesys_lock);
   return;
 }
 
@@ -190,7 +199,16 @@ static void
 remove (void **argv, uint32_t *eax) {
   char *name = (char *) argv[0];
 
+  int *exit_argv[1];
+  exit_argv[0] = -1;
+
+  if ((name == NULL) || is_kernel_vaddr(name)) {
+    return exit(exit_argv, eax);
+  }
+
+  lock_acquire (&filesys_lock);
   *eax = filesys_remove(name);
+  lock_release (&filesys_lock);
   return;
 }
 

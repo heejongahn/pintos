@@ -98,6 +98,7 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
+  lock_init (&filesys_lock);
   list_init (&ready_list);
 
   /* Set up a thread structure for the running thread. */
