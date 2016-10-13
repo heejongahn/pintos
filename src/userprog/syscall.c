@@ -65,7 +65,7 @@ syscall_handler (struct intr_frame *f)
   /*
   while (esp < PHYS_BASE) {
     printf("%x\n", *esp);
-    esp++;
+  esp++;
   }
   */
 
@@ -112,6 +112,8 @@ syscall_handler (struct intr_frame *f)
   free (argv);
 
   if (syscall_nr == SYS_EXIT) {
+    printf("%s: exit(%d)\n",
+        thread_current()->name, thread_current()->exit_code);
     thread_exit();
   }
 
