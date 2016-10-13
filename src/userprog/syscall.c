@@ -45,6 +45,8 @@ static handler handlers[13] = {
   &close
 };
 
+static int *abnormal_exit_argv[1] = {-1};
+
 void
 syscall_init (void)
 {
@@ -58,8 +60,9 @@ syscall_handler (struct intr_frame *f)
   uint32_t *eax = &f->eax;
   uint32_t syscall_nr;
   int argc, i;
-  void **argv;
+  void *argv[3];
 
+  memset (argv, 0, sizeof (void *) * 4);
   get_user(esp, &syscall_nr, 4);
   // printf("System call number: %d\n", syscall_nr);
   // printf("Current esp: %p\n", esp);
@@ -101,9 +104,6 @@ syscall_handler (struct intr_frame *f)
 
   // printf("System call argc: %d\n", argc);
 
-  argv = malloc (argc * 4);
-  memset (argv, 0, argc * 4);
-
   for (i=0; i<argc; i++) {
     get_user((esp+i), &(argv[i]), 4);
     // printf("System call argument #%d(at %p): %p\n", i, (esp+i), (argv[i]));
@@ -111,18 +111,10 @@ syscall_handler (struct intr_frame *f)
 
   // hex_dump(0, esp, PHYS_BASE - (unsigned) esp, true);
   (*handlers[syscall_nr]) (argv, eax);
-  free (argv);
-
-  if (syscall_nr == SYS_EXIT) {
-    printf("%s: exit(%d)\n",
-        thread_current()->name, thread_current()->exit_code);
-    thread_exit();
-  }
 
   return;
 }
 
-// TODO: Unmapped virtual address check
 /* Reads SIZE bytes at user virtual address UADDR.
    Power off if failed. */
 static void
@@ -130,14 +122,19 @@ get_user (const uint8_t *uaddr, void *save_to, size_t size)
 {
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
-    if ((!check) || is_kernel_vaddr(check))
-      power_off();
+    if ((!check) || is_kernel_vaddr(check)) {
+      return exit(abnormal_exit_argv, NULL);
+    }
+
+    if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+      return exit(abnormal_exit_argv, NULL);
+    }
   }
+
 
   memcpy (save_to, uaddr, size);
 }
 
-// TODO: Unmapped virtual address check
 /* Writes SIZE bytes to user address UADDR, copying from COPY_FROM.
    Power off if failed. */
 static void
@@ -145,9 +142,15 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
 {
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
-    if ((!check) || is_kernel_vaddr(check))
-      power_off();
+    if ((!check) || is_kernel_vaddr(check)) {
+      return exit(abnormal_exit_argv, NULL);
+    }
+
+    if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+      return exit(abnormal_exit_argv, NULL);
+    }
   }
+
 
   memcpy (uaddr, copy_from, size);
 }
@@ -163,7 +166,11 @@ static void
 exit (void **argv, uint32_t *eax) {
   struct thread *t = thread_current ();
   t->exit_code = (int) argv[0];
+  printf("%s: exit(%d)\n",
+      thread_current()->name, thread_current()->exit_code);
   sema_up(&t->exiting);
+
+  thread_exit();
   return;
 }
 
@@ -182,11 +189,13 @@ create (void **argv, uint32_t *eax) {
   char *file = (char *) argv[0];
   unsigned initial_size = (unsigned) argv[1];
 
-  int *exit_argv[1];
-  exit_argv[0] = -1;
 
-  if ((file == NULL) || is_kernel_vaddr(file)) {
-    return exit(exit_argv, eax);
+  if ((!file) || is_kernel_vaddr(file)) {
+    return exit(abnormal_exit_argv, eax);
+  }
+
+  if (!pagedir_get_page(thread_current()->pagedir, file)) {
+    return exit(abnormal_exit_argv, eax);
   }
 
   lock_acquire (&filesys_lock);
@@ -199,11 +208,12 @@ static void
 remove (void **argv, uint32_t *eax) {
   char *name = (char *) argv[0];
 
-  int *exit_argv[1];
-  exit_argv[0] = -1;
+  if ((!name) || is_kernel_vaddr(name)) {
+    return exit(abnormal_exit_argv, eax);
+  }
 
-  if ((name == NULL) || is_kernel_vaddr(name)) {
-    return exit(exit_argv, eax);
+  if (!pagedir_get_page(thread_current()->pagedir, name)) {
+    return exit(abnormal_exit_argv, eax);
   }
 
   lock_acquire (&filesys_lock);
@@ -238,6 +248,7 @@ write (void **argv, uint32_t *eax) {
   }
 
   *eax = size;
+
   return;
 }
 
