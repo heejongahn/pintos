@@ -281,15 +281,42 @@ write (void **argv, uint32_t *eax) {
 
 static void
 seek (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+  unsigned pos = (unsigned) argv[1];
+
+  struct file *f = thread_find_file(fd);
+
+  file_seek(f, pos);
   return;
 }
 
 static void
 tell (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+  struct file *f = thread_find_file(fd);
+
+  *eax = file_tell (f);
   return;
 }
 
 static void
 close (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+  struct file *f;
+
+  if (fd < 2) {
+    return exit (abnormal_exit_argv, eax);
+  }
+
+  f = thread_find_file(fd);
+
+  if (!f) {
+    return exit (abnormal_exit_argv, eax);
+  }
+
+  lock_acquire(&filesys_lock);
+  file_close(f);
+  lock_release(&filesys_lock);
+
   return;
 }
