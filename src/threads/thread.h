@@ -5,6 +5,7 @@
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
+#include "filesys/file.h"
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -131,6 +132,8 @@ void thread_unblock (struct thread *);
 struct thread *thread_current (void);
 tid_t thread_tid (void);
 const char *thread_name (void);
+
+struct file *thread_find_file (int);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);

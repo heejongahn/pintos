@@ -332,6 +332,26 @@ thread_set_priority (int new_priority)
   thread_current ()->priority = new_priority;
 }
 
+struct file *
+thread_find_file (int fd) {
+  struct list file_list = thread_current()->file_list;
+  struct list_elem *curr;
+  struct file *f;
+
+  lock_acquire(&filesys_lock);
+  for (curr=list_begin(&file_list); curr!=list_tail(&file_list);
+      curr=list_next(curr)) {
+    f = list_entry(curr, struct file, elem);
+    if (f->fd == fd) {
+      lock_release(&filesys_lock);
+      break;
+    }
+  }
+
+  lock_release(&filesys_lock);
+  return f ? f : NULL;
+}
+
 /* Returns the current thread's . */
 int
 thread_get_priority (void)
