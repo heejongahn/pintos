@@ -8,6 +8,7 @@
 #include "threads/malloc.h"
 #include "threads/palloc.h"
 #include "threads/synch.h"
+#include "filesys/file.h"
 #include "filesys/filesys.h"
 
 static void syscall_handler (struct intr_frame *);
@@ -220,11 +221,32 @@ remove (void **argv, uint32_t *eax) {
 
 static void
 open (void **argv, uint32_t *eax) {
+  char *cmd_name = (char *) argv[0];
+  char *name = palloc_get_page(PAL_USER);
+  struct file *f;
+
+  strlcpy (name, cmd_name, PGSIZE);
+
+  lock_acquire(&filesys_lock);
+  f = filesys_open (name);
+  lock_release(&filesys_lock);
+
+  if (!f) {
+    *eax = -1;
+  } else {
+    *eax = (f->fd);
+  }
+  palloc_free_page (name);
   return;
 }
 
 static void
 filesize (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+
+  struct file *f = thread_find_file(fd);
+  *eax = file_length (f);
+
   return;
 }
 
