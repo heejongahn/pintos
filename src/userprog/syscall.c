@@ -11,6 +11,8 @@
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
+static bool check_uaddr (void *);
+
 static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
@@ -48,6 +50,21 @@ static handler handlers[13] = {
 };
 
 static int *abnormal_exit_argv[1] = {-1};
+
+/* Check and if UADDR is invalid address, return true
+   Return false otherwise */
+
+static bool
+check_uaddr (void *uaddr) {
+  if ((!uaddr) || is_kernel_vaddr(uaddr)) {
+    return true;
+  }
+
+  if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+    return true;
+  }
+  return false;
+}
 
 void
 syscall_init (void)
@@ -111,11 +128,7 @@ get_user (const uint8_t *uaddr, void *save_to, size_t size)
 {
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
-    if ((!check) || is_kernel_vaddr(check)) {
-      return exit(abnormal_exit_argv, NULL);
-    }
-
-    if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+    if (check_uaddr(check)) {
       return exit(abnormal_exit_argv, NULL);
     }
   }
@@ -131,11 +144,7 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
 {
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
-    if ((!check) || is_kernel_vaddr(check)) {
-      return exit(abnormal_exit_argv, NULL);
-    }
-
-    if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+    if (check_uaddr(check)) {
       return exit(abnormal_exit_argv, NULL);
     }
   }
@@ -186,12 +195,7 @@ create (void **argv, uint32_t *eax) {
   char *file = (char *) argv[0];
   unsigned initial_size = (unsigned) argv[1];
 
-
-  if ((!file) || is_kernel_vaddr(file)) {
-    return exit(abnormal_exit_argv, eax);
-  }
-
-  if (!pagedir_get_page(thread_current()->pagedir, file)) {
+  if (check_uaddr(file)) {
     return exit(abnormal_exit_argv, eax);
   }
 
@@ -205,11 +209,7 @@ static void
 remove (void **argv, uint32_t *eax) {
   char *name = (char *) argv[0];
 
-  if ((!name) || is_kernel_vaddr(name)) {
-    return exit(abnormal_exit_argv, eax);
-  }
-
-  if (!pagedir_get_page(thread_current()->pagedir, name)) {
+  if (check_uaddr(name)) {
     return exit(abnormal_exit_argv, eax);
   }
 
