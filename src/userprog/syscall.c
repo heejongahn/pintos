@@ -266,6 +266,10 @@ write (void **argv, uint32_t *eax) {
   char *buf = (char *)argv[1];
   unsigned size = (unsigned )argv[2];
 
+  if (check_uaddr(buf)) {
+    return exit(abnormal_exit_argv, eax);
+  }
+
   if (fd == 1) {
     putbuf(buf, size);
   }
