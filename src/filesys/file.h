@@ -7,6 +7,16 @@
 struct inode;
 struct lock fd_lock;
 
+/* An open file. */
+struct file
+  {
+    int fd;                     /* File descriptor */
+    struct inode *inode;        /* File's inode. */
+    off_t pos;                  /* Current position. */
+    bool deny_write;            /* Has file_deny_write() been called? */
+    struct list_elem elem;      /* Elem for file_list */
+  };
+
 /* Opening and closing files. */
 struct file *file_open (struct inode *);
 struct file *file_reopen (struct file *);

@@ -6,16 +6,6 @@
 #include "threads/malloc.h"
 #include "threads/synch.h"
 
-/* An open file. */
-struct file
-  {
-    int fd;                     /* File descriptor */
-    struct inode *inode;        /* File's inode. */
-    off_t pos;                  /* Current position. */
-    bool deny_write;            /* Has file_deny_write() been called? */
-    struct list_elem elem;      /* Elem for file_list */
-  };
-
 static int
 allocate_fd (void)
 {
