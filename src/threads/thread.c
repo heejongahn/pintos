@@ -338,18 +338,20 @@ thread_find_file (int fd) {
   struct list_elem *curr;
   struct file *f;
 
+  bool found = false;
+
   lock_acquire(&filesys_lock);
   for (curr=list_begin(&file_list); curr!=list_tail(&file_list);
       curr=list_next(curr)) {
     f = list_entry(curr, struct file, elem);
     if (f->fd == fd) {
-      lock_release(&filesys_lock);
+      found = true;
       break;
     }
   }
 
   lock_release(&filesys_lock);
-  return f ? f : NULL;
+  return found ? f : NULL;
 }
 
 /* Returns the current thread's . */
