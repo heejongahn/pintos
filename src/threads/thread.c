@@ -334,14 +334,14 @@ thread_set_priority (int new_priority)
 
 struct file *
 thread_find_file (int fd) {
-  struct list file_list = thread_current()->file_list;
+  struct list *file_list = &thread_current()->file_list;
   struct list_elem *curr;
   struct file *f;
 
   bool found = false;
 
   lock_acquire(&filesys_lock);
-  for (curr=list_begin(&file_list); curr!=list_tail(&file_list);
+  for (curr=list_begin(file_list); curr!=list_tail(file_list);
       curr=list_next(curr)) {
     f = list_entry(curr, struct file, elem);
     if (f->fd == fd) {
