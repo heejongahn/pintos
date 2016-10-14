@@ -13,7 +13,7 @@ allocate_fd (void)
   int fd;
 
   lock_acquire (&fd_lock);
-  fd == next_fd++;
+  fd = next_fd++;
   lock_release (&fd_lock);
 
   return fd;
