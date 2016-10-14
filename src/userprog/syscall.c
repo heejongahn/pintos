@@ -257,6 +257,37 @@ filesize (void **argv, uint32_t *eax) {
 
 static void
 read (void **argv, uint32_t *eax) {
+  int fd = (int) argv[0];
+  void *buffer = (void *) argv[1];
+  unsigned size = (unsigned) size;
+  int i=0;
+
+  struct file *f;
+
+  if (fd == 0) {
+    for (i; i<size; i++) {
+      ((char *) buffer)[i] = input_getc();
+    }
+  }
+
+  if (fd == 1) {
+    return exit (abnormal_exit_argv, eax);
+  }
+
+  if (check_uaddr(buffer)) {
+    return exit (abnormal_exit_argv, eax);
+  }
+
+  f = thread_find_file(fd);
+
+  if (!f) {
+    return exit (abnormal_exit_argv, eax);
+  }
+
+  lock_acquire(&filesys_lock);
+  *eax = file_read(f, buffer, size);
+  lock_release(&filesys_lock);
+
   return;
 }
 
@@ -268,6 +299,10 @@ write (void **argv, uint32_t *eax) {
 
   if (check_uaddr(buf)) {
     return exit(abnormal_exit_argv, eax);
+  }
+
+  if (fd == 0) {
+    return exit (abnormal_exit_argv, eax);
   }
 
   if (fd == 1) {
