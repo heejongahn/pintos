@@ -113,10 +113,13 @@ process_wait (tid_t child_tid)
     return -1;
   }
 
+  if (child -> killed_by_process) {
+    return -1;
+  }
+
   sema_down(&child->exiting);
 
   list_remove(curr);
-  // printf("Ending wating for thread %d.\n", child->tid);
   return child->exit_code;
 }
 
