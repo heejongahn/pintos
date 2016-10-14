@@ -222,6 +222,11 @@ remove (void **argv, uint32_t *eax) {
 static void
 open (void **argv, uint32_t *eax) {
   char *cmd_name = (char *) argv[0];
+
+  if (check_uaddr(cmd_name)) {
+    return exit(abnormal_exit_argv, eax);
+  }
+
   char *name = palloc_get_page(PAL_USER);
   struct file *f;
 
