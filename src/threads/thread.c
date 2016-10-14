@@ -478,6 +478,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->alarm_ticks = -1;
   t->magic = THREAD_MAGIC;
+  t->killed_by_kernel = false;
   list_init(&t->child_list);
   list_init(&t->file_list);
   sema_init(&t->exiting, 0);
