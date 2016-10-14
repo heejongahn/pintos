@@ -99,7 +99,6 @@ process_wait (tid_t child_tid)
 
   bool found = false;
 
-  // printf("Invoking process_wait for thread %d.\n", child_tid);
   for (curr=list_begin(child_list); curr!=list_tail(child_list);
       curr=list_next(curr)) {
     if (list_entry(curr, struct thread, child_elem)->tid == child_tid) {
@@ -113,7 +112,7 @@ process_wait (tid_t child_tid)
     return -1;
   }
 
-  if (child -> killed_by_process) {
+  if (child->killed_by_kernel) {
     return -1;
   }
 
