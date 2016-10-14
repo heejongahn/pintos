@@ -1,15 +1,19 @@
 #include "filesys/file.h"
 #include <debug.h>
+#include <list.h>
 #include "filesys/inode.h"
+#include "threads/thread.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
 
 /* An open file. */
 struct file
   {
+    int fd;                     /* File descriptor */
     struct inode *inode;        /* File's inode. */
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
+    struct list_elem elem;      /* Elem for file_list */
   };
 
 static int
@@ -34,9 +38,11 @@ file_open (struct inode *inode)
   struct file *file = calloc (1, sizeof *file);
   if (inode != NULL && file != NULL)
     {
+      file->fd = allocate_fd();
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
+      list_push_front(&thread_current()->file_list, &file->elem);
       return file;
     }
   else
@@ -62,6 +68,7 @@ file_close (struct file *file)
   if (file != NULL)
     {
       file_allow_write (file);
+      list_remove(&file->elem);
       inode_close (file->inode);
       free (file);
     }

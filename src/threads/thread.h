@@ -103,6 +103,7 @@ struct thread
     struct list_elem child_elem;        /* Elem for the child_list */
 #endif
 
+    struct list file_list;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
