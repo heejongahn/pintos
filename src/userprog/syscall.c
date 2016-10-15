@@ -270,7 +270,7 @@ static void
 read (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
   void *buffer = (void *) argv[1];
-  unsigned size = (unsigned) size;
+  unsigned size = (unsigned) argv[2];
   int i = 0;
   int stdin_size = 0;
 
@@ -341,8 +341,6 @@ write (void **argv, uint32_t *eax) {
   lock_acquire(&filesys_lock);
   *eax = file_write(f, buf, size);
   lock_release(&filesys_lock);
-
-  *eax = size;
 
   return;
 }
