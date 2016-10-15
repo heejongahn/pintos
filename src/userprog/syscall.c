@@ -180,7 +180,13 @@ exit (void **argv, uint32_t *eax) {
 static void
 exec (void **argv, uint32_t *eax) {
   char *cmd_line = (char *) argv[0];
-  char *exec_cmd_line = palloc_get_page(PAL_USER);
+  char *exec_cmd_line;
+
+  if (check_uaddr(cmd_line)) {
+    abnormal_exit();
+  }
+
+  exec_cmd_line = palloc_get_page(PAL_USER);
   strlcpy (exec_cmd_line, cmd_line, PGSIZE);
   *eax = process_execute(exec_cmd_line);
   palloc_free_page(exec_cmd_line);
