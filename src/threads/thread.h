@@ -102,7 +102,6 @@ struct thread
     struct semaphore exiting;           /* Semaphore for exit status */
     struct list child_list;             /* List of children */
     struct list_elem child_elem;        /* Elem for the child_list */
-    bool killed_by_kernel;
 #endif
 
     struct list file_list;

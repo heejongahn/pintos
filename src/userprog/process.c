@@ -112,10 +112,6 @@ process_wait (tid_t child_tid)
     return -1;
   }
 
-  if (child->killed_by_kernel) {
-    return -1;
-  }
-
   sema_down(&child->exiting);
 
   list_remove(curr);
