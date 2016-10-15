@@ -265,13 +265,22 @@ read (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
   void *buffer = (void *) argv[1];
   unsigned size = (unsigned) size;
-  int i=0;
+  int i = 0;
+  int stdin_size = 0;
 
   struct file *f;
+  char c;
 
   if (fd == 0) {
     for (i; i<size; i++) {
-      ((char *) buffer)[i] = input_getc();
+      c = input_getc();
+      if (c) {
+        stdin_size++;
+        ((char *) buffer)[i] = c;
+      } else {
+        *eax = stdin_size;
+        return;
+      }
     }
     return;
   }
