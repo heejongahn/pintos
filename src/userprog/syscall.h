@@ -3,5 +3,6 @@
 
 typedef int pid_t;
 void syscall_init (void);
+void abnormal_exit (void);
 
 #endif /* userprog/syscall.h */

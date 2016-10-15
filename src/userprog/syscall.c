@@ -49,8 +49,6 @@ static handler handlers[13] = {
   &close
 };
 
-static int *abnormal_exit_argv[1] = {-1};
-
 /* Check and if UADDR is invalid address, return true
    Return false otherwise */
 
@@ -70,6 +68,13 @@ void
 syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+}
+
+void
+abnormal_exit (void)
+{
+  int *abnormal_exit_argv[1] = {-1};
+  exit (abnormal_exit_argv, NULL);
 }
 
 static void
@@ -129,7 +134,7 @@ get_user (const uint8_t *uaddr, void *save_to, size_t size)
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
     if (check_uaddr(check)) {
-      return exit(abnormal_exit_argv, NULL);
+      abnormal_exit();
     }
   }
 
@@ -145,7 +150,7 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
     if (check_uaddr(check)) {
-      return exit(abnormal_exit_argv, NULL);
+      abnormal_exit();
     }
   }
 
@@ -196,7 +201,7 @@ create (void **argv, uint32_t *eax) {
   unsigned initial_size = (unsigned) argv[1];
 
   if (check_uaddr(file)) {
-    return exit(abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   lock_acquire (&filesys_lock);
@@ -210,7 +215,7 @@ remove (void **argv, uint32_t *eax) {
   char *name = (char *) argv[0];
 
   if (check_uaddr(name)) {
-    return exit(abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   lock_acquire (&filesys_lock);
@@ -224,7 +229,7 @@ open (void **argv, uint32_t *eax) {
   char *cmd_name = (char *) argv[0];
 
   if (check_uaddr(cmd_name)) {
-    return exit(abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   char *name = palloc_get_page(PAL_USER);
@@ -271,17 +276,17 @@ read (void **argv, uint32_t *eax) {
   }
 
   if (fd == 1) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   if (check_uaddr(buffer)) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   f = thread_find_file(fd);
 
   if (!f) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   lock_acquire(&filesys_lock);
@@ -298,11 +303,11 @@ write (void **argv, uint32_t *eax) {
   unsigned size = (unsigned )argv[2];
 
   if (check_uaddr(buf)) {
-    return exit(abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   if (fd == 0) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   if (fd == 1) {
@@ -340,13 +345,13 @@ close (void **argv, uint32_t *eax) {
   struct file *f;
 
   if (fd < 2) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   f = thread_find_file(fd);
 
   if (!f) {
-    return exit (abnormal_exit_argv, eax);
+    abnormal_exit();
   }
 
   lock_acquire(&filesys_lock);
