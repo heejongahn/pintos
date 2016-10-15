@@ -273,6 +273,7 @@ read (void **argv, uint32_t *eax) {
     for (i; i<size; i++) {
       ((char *) buffer)[i] = input_getc();
     }
+    return;
   }
 
   if (fd == 1) {
@@ -301,6 +302,7 @@ write (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
   char *buf = (char *)argv[1];
   unsigned size = (unsigned )argv[2];
+  struct file *f;
 
   if (check_uaddr(buf)) {
     abnormal_exit();
@@ -312,7 +314,18 @@ write (void **argv, uint32_t *eax) {
 
   if (fd == 1) {
     putbuf(buf, size);
+    return;
   }
+
+  f = thread_find_file(fd);
+
+  if (!f) {
+    abnormal_exit();
+  }
+
+  lock_acquire(&filesys_lock);
+  *eax = file_write(f, buf, size);
+  lock_release(&filesys_lock);
 
   *eax = size;
 
