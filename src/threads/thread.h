@@ -105,6 +105,7 @@ struct thread
     struct file *self_file;
 #endif
 
+    bool is_waited;
     struct list file_list;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

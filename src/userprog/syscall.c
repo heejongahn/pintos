@@ -168,10 +168,18 @@ halt (void **argv, uint32_t *eax) {
 static void
 exit (void **argv, uint32_t *eax) {
   struct thread *t = thread_current ();
+  enum intr_level old_level;
+
   t->exit_code = (int) argv[0];
   printf("%s: exit(%d)\n",
       thread_current()->name, thread_current()->exit_code);
   sema_up(&t->exiting);
+
+  old_level = intr_disable();
+  if (t->is_waited) {
+    thread_block();
+  }
+  intr_set_level (old_level);
 
   thread_exit();
   return;
