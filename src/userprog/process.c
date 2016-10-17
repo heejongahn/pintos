@@ -137,6 +137,9 @@ process_exit (void)
   struct thread *curr = thread_current ();
   uint32_t *pd;
 
+  if (curr->self_file != NULL) {
+    file_close(curr->self_file);
+  }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
@@ -359,10 +362,11 @@ load (char *file_name, void (**eip) (void), void **esp)
 
   success = true;
   sema_up(&success_sema);
+  thread_current()->self_file = file;
+  file_deny_write(file);
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
   lock_release(&filesys_lock);
   sema_up(&load_sema);
   return success;
