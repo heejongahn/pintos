@@ -109,6 +109,8 @@ process_wait (tid_t child_tid)
   struct list *child_list = &thread_current()->child_list;
   struct list_elem *curr;
 
+  int exit_code;
+
   for (curr=list_begin(child_list); curr!=list_tail(child_list);
       curr=list_next(curr)) {
     if (list_entry(curr, struct thread, child_elem)->tid == child_tid) {
@@ -122,10 +124,11 @@ process_wait (tid_t child_tid)
   }
 
   sema_down(&child->exit_sema);
+  exit_code = child->exit_code;
   sema_up(&child->wait_sema);
 
   list_remove(curr);
-  return child->exit_code;
+  return exit_code;
 }
 
 /* Free the current process's resources. */
