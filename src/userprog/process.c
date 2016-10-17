@@ -138,7 +138,9 @@ process_exit (void)
   uint32_t *pd;
 
   if (curr->self_file != NULL) {
+    lock_acquire(&filesys_lock);
     file_close(curr->self_file);
+    lock_release(&filesys_lock);
   }
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
