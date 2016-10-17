@@ -121,7 +121,7 @@ process_wait (tid_t child_tid)
     return -1;
   }
 
-  sema_down(&child->exiting);
+  sema_down(&child->exit_sema);
   sema_up(&child->wait_sema);
 
   list_remove(curr);

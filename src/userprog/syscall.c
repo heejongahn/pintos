@@ -173,7 +173,7 @@ exit (void **argv, uint32_t *eax) {
   t->exit_code = (int) argv[0];
   printf("%s: exit(%d)\n",
       thread_current()->name, thread_current()->exit_code);
-  sema_up(&t->exiting);
+  sema_up(&t->exit_sema);
 
   sema_down(&t->wait_sema);
   thread_exit();

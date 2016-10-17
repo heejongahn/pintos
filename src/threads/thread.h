@@ -99,14 +99,14 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
     int exit_code;                      /* Exit code of program */
-    struct semaphore exiting;           /* Semaphore for exit status */
-    struct semaphore wait_sema;
+    struct semaphore exit_sema;         /* Semaphore for exit synch */
+    struct semaphore wait_sema;         /* Semaphore for wait synch */
     struct list child_list;             /* List of children */
     struct list_elem child_elem;        /* Elem for the child_list */
-    struct file *self_file;
+    struct file *self_file;             /* User process executable file */
 #endif
 
-    struct list file_list;
+    struct list file_list;              /* List of open files for this thread */
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
