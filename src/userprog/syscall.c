@@ -134,10 +134,9 @@ get_user (const uint8_t *uaddr, void *save_to, size_t size)
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
     if (check_uaddr(check)) {
-      abnormal_exit();
+      return abnormal_exit();
     }
   }
-
 
   memcpy (save_to, uaddr, size);
 }
@@ -150,10 +149,9 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
   uint8_t *check = uaddr;
   for (check; check < uaddr + size; check++) {
     if (check_uaddr(check)) {
-      abnormal_exit();
+      return abnormal_exit();
     }
   }
-
 
   memcpy (uaddr, copy_from, size);
 }
@@ -272,10 +270,10 @@ filesize (void **argv, uint32_t *eax) {
 static void
 read (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
-  void *buffer = (void *) argv[1];
+  uint8_t *buf = (uint8_t *) argv[1];
   unsigned size = (unsigned) argv[2];
   int i = 0;
-  int stdin_size = 0;
+  int read_size = 0;
 
   struct file *f;
   char c;
@@ -284,10 +282,10 @@ read (void **argv, uint32_t *eax) {
     for (i; i<size; i++) {
       c = input_getc();
       if (c) {
-        stdin_size++;
-        ((char *) buffer)[i] = c;
+        read_size++;
+        put_user ((buf+i), &c, 1);
       } else {
-        *eax = stdin_size;
+        *eax = read_size;
         return;
       }
     }
@@ -298,21 +296,22 @@ read (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
-  if (check_uaddr(buffer)) {
-    abnormal_exit();
-  }
-
   f = thread_find_file(fd);
 
   if (!f) {
     abnormal_exit();
   }
 
-  lock_acquire(&filesys_lock);
-  file_deny_write(f);
-  *eax = file_read(f, buffer, size);
-  file_allow_write(f);
-  lock_release(&filesys_lock);
+
+  for (i=0; i<size; i++) {
+    lock_acquire(&filesys_lock);
+    file_read(f, &c, 1);
+    lock_release(&filesys_lock);
+    put_user((buf+i), &c, 1);
+    read_size++;
+  }
+
+  *eax = read_size;
 
   return;
 }
