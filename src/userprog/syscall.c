@@ -272,14 +272,14 @@ read (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
   uint8_t *buf = (uint8_t *) argv[1];
   unsigned size = (unsigned) argv[2];
-  int i = 0;
+  int i;
   int read_size = 0;
 
   struct file *f;
   char c;
 
   if (fd == 0) {
-    for (i; i<size; i++) {
+    for (i=0; i<size; i++) {
       c = input_getc();
       if (c) {
         read_size++;
@@ -302,16 +302,14 @@ read (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
-
   for (i=0; i<size; i++) {
     lock_acquire(&filesys_lock);
     file_read(f, &c, 1);
     lock_release(&filesys_lock);
     put_user((buf+i), &c, 1);
-    read_size++;
   }
 
-  *eax = read_size;
+  *eax = size;
 
   return;
 }
@@ -319,19 +317,25 @@ read (void **argv, uint32_t *eax) {
 static void
 write (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
-  char *buf = (char *)argv[1];
-  unsigned size = (unsigned )argv[2];
+  uint8_t *buf = (uint8_t *) argv[1];
+  unsigned size = (unsigned) argv[2];
   struct file *f;
 
-  if (check_uaddr(buf)) {
-    abnormal_exit();
-  }
+  char c;
+  int i;
+  int write_size = 0;
+
 
   if (fd == 0) {
     abnormal_exit();
   }
 
   if (fd == 1) {
+    for (i=0; i<size; i++) {
+      if (check_uaddr(buf+i)) {
+        return abnormal_exit();
+      }
+    }
     putbuf(buf, size);
     return;
   }
@@ -342,10 +346,14 @@ write (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
-  lock_acquire(&filesys_lock);
-  *eax = file_write(f, buf, size);
-  lock_release(&filesys_lock);
+  for (i=0; i<size; i++) {
+    get_user((buf+i), &c, 1);
+    lock_acquire(&filesys_lock);
+    file_write(f, &c, 1);
+    lock_release(&filesys_lock);
+  }
 
+  *eax = size;
   return;
 }
 
