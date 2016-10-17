@@ -306,7 +306,9 @@ read (void **argv, uint32_t *eax) {
   }
 
   lock_acquire(&filesys_lock);
+  file_deny_write(f);
   *eax = file_read(f, buffer, size);
+  file_allow_write(f);
   lock_release(&filesys_lock);
 
   return;
@@ -352,7 +354,9 @@ seek (void **argv, uint32_t *eax) {
 
   struct file *f = thread_find_file(fd);
 
+  lock_acquire(&filesys_lock);
   file_seek(f, pos);
+  lock_release(&filesys_lock);
   return;
 }
 
@@ -361,7 +365,9 @@ tell (void **argv, uint32_t *eax) {
   int fd = (int) argv[0];
   struct file *f = thread_find_file(fd);
 
+  lock_acquire(&filesys_lock);
   *eax = file_tell (f);
+  lock_release(&filesys_lock);
   return;
 }
 
