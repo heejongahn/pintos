@@ -19,6 +19,9 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
+static struct semaphore load_sema;
+static struct semaphore success_sema;
+
 static thread_func start_process NO_RETURN;
 static bool load (char *cmdline, void (**eip) (void), void **esp);
 
@@ -33,6 +36,9 @@ process_execute (const char *file_name)
   char *save_ptr UNUSED;
   tid_t tid;
 
+  sema_init(&load_sema, 0);
+  sema_init(&success_sema, 0);
+
   /* Make a copy of FILE_NAME.
      Otherwise there's a race between the caller and load(). */
   fn_copy = palloc_get_page (0);
@@ -44,6 +50,13 @@ process_execute (const char *file_name)
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy,
       thread_current());
+
+  sema_down(&load_sema);
+
+  if (!sema_try_down(&success_sema)) {
+    return TID_ERROR;
+  }
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy);
   return tid;
@@ -66,10 +79,9 @@ start_process (void *fn_copy)
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  if (!success)
+  if (!success) {
     thread_exit ();
-
-  // printf("Pushing elem to user_list.\n");
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -346,11 +358,13 @@ load (char *file_name, void (**eip) (void), void **esp)
   *eip = (void (*) (void)) ehdr.e_entry;
 
   success = true;
+  sema_up(&success_sema);
 
  done:
   /* We arrive here whether the load is successful or not. */
   file_close (file);
   lock_release(&filesys_lock);
+  sema_up(&load_sema);
   return success;
 }
 
