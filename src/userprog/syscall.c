@@ -175,12 +175,7 @@ exit (void **argv, uint32_t *eax) {
       thread_current()->name, thread_current()->exit_code);
   sema_up(&t->exiting);
 
-  old_level = intr_disable();
-  if (t->is_waited) {
-    thread_block();
-  }
-  intr_set_level (old_level);
-
+  sema_down(&t->wait_sema);
   thread_exit();
   return;
 }

@@ -193,7 +193,6 @@ thread_create (const char *name, int priority,
 
   if (parent != NULL) {
     list_push_front(&parent->child_list, &t->child_elem);
-    t->is_waited = true;
   }
 
   /* Stack frame for kernel_thread(). */
@@ -479,10 +478,10 @@ init_thread (struct thread *t, const char *name, int priority)
   t->alarm_ticks = -1;
   t->magic = THREAD_MAGIC;
   t->self_file = NULL;
-  t->is_waited = false;
   list_init(&t->child_list);
   list_init(&t->file_list);
   sema_init(&t->exiting, 0);
+  sema_init(&t->wait_sema, 0);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and

@@ -100,12 +100,12 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
     int exit_code;                      /* Exit code of program */
     struct semaphore exiting;           /* Semaphore for exit status */
+    struct semaphore wait_sema;
     struct list child_list;             /* List of children */
     struct list_elem child_elem;        /* Elem for the child_list */
     struct file *self_file;
 #endif
 
-    bool is_waited;
     struct list file_list;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

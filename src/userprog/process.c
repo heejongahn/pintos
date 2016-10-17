@@ -109,23 +109,20 @@ process_wait (tid_t child_tid)
   struct list *child_list = &thread_current()->child_list;
   struct list_elem *curr;
 
-  bool found = false;
-
   for (curr=list_begin(child_list); curr!=list_tail(child_list);
       curr=list_next(curr)) {
     if (list_entry(curr, struct thread, child_elem)->tid == child_tid) {
       child = list_entry(curr, struct thread, child_elem);
-      found = true;
       break;
     }
   }
 
-  if (!found) {
+  if (child == NULL) {
     return -1;
   }
 
   sema_down(&child->exiting);
-  thread_unblock(child);
+  sema_up(&child->wait_sema);
 
   list_remove(curr);
   return child->exit_code;
