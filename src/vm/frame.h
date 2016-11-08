@@ -10,4 +10,4 @@ struct frame {
 };
 
 void init_frame (void);
-void allocate_frame (uint8_t *, uint8_t *);
+uint8_t *allocate_frame (uint8_t *);

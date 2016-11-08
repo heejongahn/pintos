@@ -457,10 +457,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Get a page of memory. */
-      uint8_t *kpage = palloc_get_page (PAL_USER);
+      uint8_t *kpage = allocate_frame (upage);
       if (kpage == NULL)
         return false;
-
 
       /* Load this page. */
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
@@ -476,9 +475,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           palloc_free_page (kpage);
           return false;
         }
-
-      /* Add to frame table */
-      allocate_frame (kpage, upage);
 
       /* Advance. */
       read_bytes -= page_read_bytes;
