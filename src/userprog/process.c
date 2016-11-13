@@ -19,6 +19,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/frame.h"
+#include "vm/page.h"
 
 static struct semaphore load_sema;
 static struct semaphore success_sema;
@@ -71,6 +72,8 @@ start_process (void *fn_copy)
   struct intr_frame if_;
   bool success;
   char *file_name = (char *) fn_copy;
+
+  s_page_init();
 
   /* Initialize interrupt frame and load executable. */
   memset (&if_, 0, sizeof if_);
