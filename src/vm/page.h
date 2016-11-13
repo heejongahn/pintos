@@ -1,4 +1,5 @@
 #include <hash.h>
+#include "threads/synch.h"
 #include "filesys/file.h"
 
 enum page_location {
@@ -8,6 +9,7 @@ enum page_location {
 };
 
 struct hash s_page_table;
+struct lock s_page_lock;
 
 struct s_page {
   uint8_t *uaddr;
@@ -29,3 +31,4 @@ struct s_page {
 
 void s_page_init (void);
 bool s_page_insert_file (uint8_t *, struct file *, off_t, uint32_t, uint32_t, bool);
+struct s_page *page_lookup (const void *);
