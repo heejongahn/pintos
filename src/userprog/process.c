@@ -462,7 +462,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
 
       /* Just add to the supplemental page table and that's it*/
-      success = s_page_insert_file (upage, file, ofs, page_read_bytes, page_zero_bytes, writable);
+      if (page_zero_bytes == PGSIZE) {
+        success = s_page_insert_zero (upage);
+      } else {
+        success = s_page_insert_file (upage, file, ofs, page_read_bytes, page_zero_bytes, writable);
+      }
+
       if (!success) {
         return false;
       }

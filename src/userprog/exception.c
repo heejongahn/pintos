@@ -155,11 +155,16 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   page = page_lookup (fault_addr);
-
-  switch (page->location) {
-    case DISK:
-      success = s_page_load_file(page);
+  if (page == NULL) {
+    printf ("Page fault at %p: %s error %s page in %s context.\n",
+            fault_addr,
+            not_present ? "not present" : "rights violation",
+            write ? "writing" : "reading",
+            user ? "user" : "kernel");
+    kill (f);
   }
+
+  success = s_page_load (page);
 
   if (!success) {
     /* To implement virtual memory, delete the rest of the function

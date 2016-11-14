@@ -9,6 +9,8 @@
 static unsigned hash_func (const struct hash_elem *, void *);
 static bool less_func (const struct hash_elem *, const struct hash_elem *, void *);
 static bool install_s_page (uint8_t *, uint8_t *, bool);
+static bool s_page_load_file (struct s_page *);
+static bool s_page_load_zero (struct s_page *);
 
 void
 s_page_init () {
@@ -20,6 +22,7 @@ bool
 s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
     uint32_t read_bytes, uint32_t zero_bytes, bool writable) {
   struct s_page *page = malloc (sizeof (struct s_page));
+  bool success;
   if (!page) {
     return false;
   }
@@ -35,17 +38,50 @@ s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
   page->file_info.zero_bytes = zero_bytes;
 
   lock_acquire(&s_page_lock);
-  struct hash_elem *success = hash_insert (&s_page_table, &page->h_elem);
+  success = hash_insert (&s_page_table, &page->h_elem) == NULL;
   lock_release(&s_page_lock);
 
-  if (!success) {
-    return true;
-  }
-
-  return false;
+  return success;
 }
 
 bool
+s_page_insert_zero (uint8_t *uaddr) {
+  struct s_page *page = malloc (sizeof (struct s_page));
+  bool success;
+
+  if (!page) {
+    return false;
+  }
+
+  printf ("s_page_insert_zero at %p\n", uaddr);
+  page->uaddr = uaddr;
+  page->location = ZERO;
+  page->writable = true;
+
+  lock_acquire(&s_page_lock);
+  success = hash_insert (&s_page_table, &page->h_elem) == NULL;
+  lock_release(&s_page_lock);
+
+  return success;
+}
+
+bool
+s_page_load (struct s_page *page) {
+  bool success = true;
+
+  switch (page->location) {
+    case DISK:
+      success = s_page_load_file (page);
+      break;
+    case ZERO:
+      success = s_page_load_zero (page);
+      break;
+  }
+
+  return success;
+}
+
+static bool
 s_page_load_file (struct s_page *page) {
   uint8_t *upage = page->uaddr;
   struct file *file = page->file_info.file;
@@ -77,6 +113,29 @@ s_page_load_file (struct s_page *page) {
 
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, writable))
+    {
+      palloc_free_page (kpage);
+      return false;
+    }
+
+  return true;
+}
+
+static bool
+s_page_load_zero (struct s_page *page) {
+  uint8_t *upage = page->uaddr;
+
+  printf ("s_page_load_zero at %p\n", upage);
+
+  /* Get a page of memory. */
+  uint8_t *kpage = allocate_frame (upage);
+  if (kpage == NULL)
+    return false;
+
+  memset (kpage, 0, PGSIZE);
+
+  /* Add the page to the process's address space. */
+  if (!install_s_page (upage, kpage, true))
     {
       palloc_free_page (kpage);
       return false;
