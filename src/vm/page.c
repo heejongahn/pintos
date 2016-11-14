@@ -27,12 +27,12 @@ s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
   printf ("s_page_insert_file at %p\n", uaddr);
   page->uaddr = uaddr;
   page->location = DISK;
+  page->writable = writable;
 
   page->file_info.file = file;
   page->file_info.ofs = ofs;
   page->file_info.read_bytes = read_bytes;
   page->file_info.zero_bytes = zero_bytes;
-  page->file_info.writable = writable;
 
   lock_acquire(&s_page_lock);
   struct hash_elem *success = hash_insert (&s_page_table, &page->h_elem);
@@ -52,7 +52,7 @@ s_page_load_file (struct s_page *page) {
   off_t ofs = page->file_info.ofs;
   uint32_t read_bytes = page->file_info.read_bytes;
   uint32_t zero_bytes = page->file_info.zero_bytes;
-  bool writable = page->file_info.writable;
+  bool writable = page->writable;
 
   printf ("s_page_load_file at %p\n", upage);
   lock_acquire(&filesys_lock);

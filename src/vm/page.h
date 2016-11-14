@@ -14,6 +14,7 @@ struct lock s_page_lock;
 struct s_page {
   uint8_t *uaddr;
   enum page_location location;
+  bool writable;
 
   struct {
     /* Info for file page */
@@ -21,7 +22,6 @@ struct s_page {
     off_t ofs;
     uint32_t read_bytes;
     uint32_t zero_bytes;
-    bool writable;
   } file_info;
 
   /* Info for swap page */
