@@ -486,54 +486,48 @@ static bool
 setup_stack (void **esp, char *cmdline)
 {
   uint8_t *kpage;
-  bool success = false;
+  bool success;
   char *token, *save_ptr;
 
   char **argv_addr = palloc_get_page(PAL_ZERO);
   int argc = 0;
   int i, byte_padding, token_length;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL)
-    {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success) {
-        *esp = PHYS_BASE;
+  success = s_page_insert_zero ((uint8_t *) PHYS_BASE - PGSIZE);
+  if (success) {
+    *esp = PHYS_BASE;
 
-        /* Argument Parsing */
-        for (token = strtok_r (cmdline, " ", &save_ptr); token != NULL;
-            token = strtok_r (NULL, " ", &save_ptr)) {
-          token_length = strlen (token) + 1;
-          *esp = *esp - token_length;
-          strlcpy (*esp, token, token_length);
-          argv_addr[argc] = *esp;
-          argc++;
-        }
-
-        /* Word_align */
-        if ((byte_padding = ((uint32_t) *esp) % 4))
-          *esp = *esp - byte_padding;
-
-        /* Argv elements */
-        *esp = *esp - sizeof (char *);
-
-        for (i = (argc-1); i >= 0; i--) {
-          *esp = *esp - sizeof (char *);
-          *(unsigned *)*esp = argv_addr[i];
-        }
-
-        /* Argv, argc, return addr */
-        *esp = *esp - sizeof (char *);
-        *(unsigned *)*esp = *esp + sizeof (char *);
-
-        *esp = *esp - sizeof (int);
-        *(int *)*esp = argc;
-
-        *esp = *esp - sizeof (int);
-      }
-      else
-        palloc_free_page (kpage);
+    /* Argument Parsing */
+    for (token = strtok_r (cmdline, " ", &save_ptr); token != NULL;
+        token = strtok_r (NULL, " ", &save_ptr)) {
+      token_length = strlen (token) + 1;
+      *esp = *esp - token_length;
+      strlcpy (*esp, token, token_length);
+      argv_addr[argc] = *esp;
+      argc++;
     }
+
+    /* Word_align */
+    if ((byte_padding = ((uint32_t) *esp) % 4))
+      *esp = *esp - byte_padding;
+
+    /* Argv elements */
+    *esp = *esp - sizeof (char *);
+
+    for (i = (argc-1); i >= 0; i--) {
+      *esp = *esp - sizeof (char *);
+      *(unsigned *)*esp = argv_addr[i];
+    }
+
+    /* Argv, argc, return addr */
+    *esp = *esp - sizeof (char *);
+    *(unsigned *)*esp = *esp + sizeof (char *);
+
+    *esp = *esp - sizeof (int);
+    *(int *)*esp = argc;
+
+    *esp = *esp - sizeof (int);
+  }
 
   palloc_free_page (argv_addr);
   palloc_free_page (cmdline);
