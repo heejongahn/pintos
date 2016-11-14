@@ -174,3 +174,14 @@ less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux) {
   struct s_page *page_b = hash_entry(b, struct s_page, h_elem);
   return ((page_a->uaddr) < (page_b->uaddr));
 }
+
+bool
+is_stack_access (void *addr, void *esp) {
+  return (esp - 32 <= addr) && is_user_vaddr(addr);
+}
+
+bool
+grow_stack (void *addr) {
+  s_page_insert_zero(pg_round_down(addr));
+  return s_page_load (page_lookup (addr));
+}

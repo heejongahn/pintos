@@ -14,8 +14,6 @@ static long long page_fault_cnt;
 
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
-static bool is_stack_access (void *, void *);
-static bool grow_stack (void *);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -183,14 +181,4 @@ page_fault (struct intr_frame *f)
             user ? "user" : "kernel");
     kill (f);
   }
-}
-
-static bool
-is_stack_access (void *addr, void *esp) {
-  return (esp - 32 <= addr);
-}
-
-static bool
-grow_stack (void *addr) {
-  return s_page_insert_zero(pg_round_down(addr));
 }

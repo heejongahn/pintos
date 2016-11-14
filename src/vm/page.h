@@ -34,3 +34,6 @@ bool s_page_insert_file (uint8_t *, struct file *, off_t, uint32_t, uint32_t, bo
 bool s_page_insert_zero (uint8_t *);
 bool s_page_load (struct s_page *);
 struct s_page *page_lookup (const void *);
+
+bool is_stack_access (void *, void *);
+bool grow_stack (void *addr);
