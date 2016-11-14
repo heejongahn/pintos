@@ -24,3 +24,24 @@ allocate_frame (uint8_t *upage) {
 
   return kpage;
 }
+
+void
+free_frame (uint8_t *kpage) {
+  struct list_elem *curr;
+  struct frame *frame;
+  bool found = false;
+
+  for (curr=list_begin(&frame_table); curr!=list_tail(&frame_table);
+          curr=list_next(curr)) {
+    frame = list_entry(curr, struct frame, elem);
+    if (frame->kpage == kpage) {
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    palloc_free_page (kpage);
+    list_remove (curr);
+  }
+}

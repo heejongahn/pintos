@@ -104,7 +104,7 @@ s_page_load_file (struct s_page *page) {
   /* Load this page. */
   if (file_read (file, kpage, read_bytes) != (int) read_bytes)
     {
-      palloc_free_page (kpage);
+      free_frame (kpage);
       lock_release(&filesys_lock);
       return false;
     }
@@ -114,7 +114,7 @@ s_page_load_file (struct s_page *page) {
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, writable))
     {
-      palloc_free_page (kpage);
+      free_frame (kpage);
       return false;
     }
 
@@ -137,7 +137,7 @@ s_page_load_zero (struct s_page *page) {
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, true))
     {
-      palloc_free_page (kpage);
+      free_frame (kpage);
       return false;
     }
 
