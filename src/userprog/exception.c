@@ -5,6 +5,7 @@
 #include "userprog/syscall.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "vm/page.h"
 #include "vm/frame.h"
 
@@ -13,6 +14,8 @@ static long long page_fault_cnt;
 
 static void kill (struct intr_frame *);
 static void page_fault (struct intr_frame *);
+static bool is_stack_access (void *, void *);
+static bool grow_stack (void *);
 
 /* Registers handlers for interrupts that can be caused by user
    programs.
@@ -155,17 +158,11 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   page = page_lookup (fault_addr);
-  if (page == NULL) {
-    printf ("Page fault at %p: %s error %s page in %s context.\n",
-            fault_addr,
-            not_present ? "not present" : "rights violation",
-            write ? "writing" : "reading",
-            user ? "user" : "kernel");
-    kill (f);
-  }
 
-  if (not_present) {
+  if (page != NULL && not_present) {
     success = s_page_load (page);
+  } else if (is_stack_access (fault_addr, f->esp)) {
+    success = grow_stack(fault_addr);
   }
 
   if (!success) {
@@ -179,4 +176,14 @@ page_fault (struct intr_frame *f)
             user ? "user" : "kernel");
     kill (f);
   }
+}
+
+static bool
+is_stack_access (void *addr, void *esp) {
+  return (esp - 32 <= addr);
+}
+
+static bool
+grow_stack (void *addr) {
+  return s_page_insert_zero(pg_round_down(addr));
 }
