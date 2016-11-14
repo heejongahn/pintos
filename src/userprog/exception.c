@@ -164,7 +164,9 @@ page_fault (struct intr_frame *f)
     kill (f);
   }
 
-  success = s_page_load (page);
+  if (not_present) {
+    success = s_page_load (page);
+  }
 
   if (!success) {
     /* To implement virtual memory, delete the rest of the function
