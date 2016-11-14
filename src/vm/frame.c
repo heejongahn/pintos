@@ -5,6 +5,7 @@
 void
 init_frame () {
   list_init (&frame_table);
+  lock_init (&frame_lock);
 }
 
 uint8_t *
