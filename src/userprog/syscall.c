@@ -10,6 +10,7 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "vm/page.h"
 
 static bool check_uaddr (void *);
 
@@ -17,21 +18,21 @@ static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
-typedef void (*handler) (void *, uint32_t *);
+typedef void (*handler) (void *, uint32_t *, uint32_t *);
 
-static void halt (void **argv, uint32_t *eax);
-static void exit (void **argv, uint32_t *eax);
-static void exec (void **argv, uint32_t *eax);
-static void wait (void **argv, uint32_t *eax);
-static void create (void **argv, uint32_t *eax);
-static void remove (void **argv, uint32_t *eax);
-static void open (void **argv, uint32_t *eax);
-static void filesize (void **argv, uint32_t *eax);
-static void read (void **argv, uint32_t *eax);
-static void write (void **argv, uint32_t *eax);
-static void seek (void **argv, uint32_t *eax);
-static void tell (void **argv, uint32_t *eax);
-static void close (void **argv, uint32_t *eax);
+static void halt (void **argv, uint32_t *eax, uint32_t *esp);
+static void exit (void **argv, uint32_t *eax, uint32_t *esp);
+static void exec (void **argv, uint32_t *eax, uint32_t *esp);
+static void wait (void **argv, uint32_t *eax, uint32_t *esp);
+static void create (void **argv, uint32_t *eax, uint32_t *esp);
+static void remove (void **argv, uint32_t *eax, uint32_t *esp);
+static void open (void **argv, uint32_t *eax, uint32_t *esp);
+static void filesize (void **argv, uint32_t *eax, uint32_t *esp);
+static void read (void **argv, uint32_t *eax, uint32_t *esp);
+static void write (void **argv, uint32_t *eax, uint32_t *esp);
+static void seek (void **argv, uint32_t *eax, uint32_t *esp);
+static void tell (void **argv, uint32_t *eax, uint32_t *esp);
+static void close (void **argv, uint32_t *eax, uint32_t *esp);
 
 static handler handlers[13] = {
   &halt,
@@ -51,7 +52,6 @@ static handler handlers[13] = {
 
 /* Check and if UADDR is invalid address, return true
    Return false otherwise */
-
 static bool
 check_uaddr (void *uaddr) {
   if ((!uaddr) || is_kernel_vaddr(uaddr)) {
@@ -61,6 +61,7 @@ check_uaddr (void *uaddr) {
   if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
     return true;
   }
+
   return false;
 }
 
@@ -74,7 +75,7 @@ void
 abnormal_exit (void)
 {
   int *abnormal_exit_argv[1] = {-1};
-  exit (abnormal_exit_argv, NULL);
+  exit (abnormal_exit_argv, NULL, NULL);
 }
 
 static void
@@ -85,6 +86,8 @@ syscall_handler (struct intr_frame *f)
   uint32_t syscall_nr;
   int argc, i;
   void *argv[3];
+
+  uint32_t *saved_esp = esp;
 
   memset (argv, 0, sizeof (void *) * 4);
   get_user(esp, &syscall_nr, 4);
@@ -121,7 +124,7 @@ syscall_handler (struct intr_frame *f)
     get_user((esp+i), &(argv[i]), 4);
   }
 
-  (*handlers[syscall_nr]) (argv, eax);
+  (*handlers[syscall_nr]) (argv, eax, saved_esp);
 
   return;
 }
@@ -154,19 +157,18 @@ put_user (const uint8_t *uaddr, void *copy_from, size_t size)
     }
   }
 
-
   memcpy (uaddr, copy_from, size);
 }
 
 
 static void
-halt (void **argv, uint32_t *eax) {
+halt (void **argv, uint32_t *eax, uint32_t *esp) {
   power_off();
   return;
 }
 
 static void
-exit (void **argv, uint32_t *eax) {
+exit (void **argv, uint32_t *eax, uint32_t *esp) {
   struct thread *t = thread_current ();
   enum intr_level old_level;
 
@@ -181,7 +183,7 @@ exit (void **argv, uint32_t *eax) {
 }
 
 static void
-exec (void **argv, uint32_t *eax) {
+exec (void **argv, uint32_t *eax, uint32_t *esp) {
   char *cmd_line = (char *) argv[0];
   char *exec_cmd_line;
 
@@ -197,7 +199,7 @@ exec (void **argv, uint32_t *eax) {
 }
 
 static void
-wait (void **argv, uint32_t *eax) {
+wait (void **argv, uint32_t *eax, uint32_t *esp) {
   tid_t tid = (tid_t) argv[0];
 
   *eax = process_wait (tid);
@@ -205,7 +207,7 @@ wait (void **argv, uint32_t *eax) {
 }
 
 static void
-create (void **argv, uint32_t *eax) {
+create (void **argv, uint32_t *eax, uint32_t *esp) {
   char *file = (char *) argv[0];
   unsigned initial_size = (unsigned) argv[1];
 
@@ -220,7 +222,7 @@ create (void **argv, uint32_t *eax) {
 }
 
 static void
-remove (void **argv, uint32_t *eax) {
+remove (void **argv, uint32_t *eax, uint32_t *esp) {
   char *name = (char *) argv[0];
 
   if (check_uaddr(name)) {
@@ -234,7 +236,7 @@ remove (void **argv, uint32_t *eax) {
 }
 
 static void
-open (void **argv, uint32_t *eax) {
+open (void **argv, uint32_t *eax, uint32_t *esp) {
   char *cmd_name = (char *) argv[0];
 
   if (check_uaddr(cmd_name)) {
@@ -260,7 +262,7 @@ open (void **argv, uint32_t *eax) {
 }
 
 static void
-filesize (void **argv, uint32_t *eax) {
+filesize (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
 
   struct file *f = thread_find_file(fd);
@@ -270,7 +272,7 @@ filesize (void **argv, uint32_t *eax) {
 }
 
 static void
-read (void **argv, uint32_t *eax) {
+read (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   void *buffer = (void *) argv[1];
   unsigned size = (unsigned) argv[2];
@@ -298,6 +300,14 @@ read (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
+  if (is_stack_access ((unsigned) buffer + size, esp)) {
+    grow_stack ((unsigned) buffer + size);
+
+    if (is_stack_access (buffer, esp-PGSIZE)) {
+      grow_stack (buffer);
+    }
+  }
+
   if (check_uaddr(buffer)) {
     abnormal_exit();
   }
@@ -309,20 +319,25 @@ read (void **argv, uint32_t *eax) {
   }
 
   lock_acquire(&filesys_lock);
-  file_deny_write(f);
   *eax = file_read(f, buffer, size);
-  file_allow_write(f);
   lock_release(&filesys_lock);
 
   return;
 }
 
 static void
-write (void **argv, uint32_t *eax) {
+write (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   char *buf = (char *)argv[1];
   unsigned size = (unsigned )argv[2];
   struct file *f;
+
+  if (is_stack_access ((unsigned) buf + size, esp)) {
+    grow_stack ((unsigned) buf + size);
+    if (is_stack_access (buf, esp-PGSIZE)) {
+      grow_stack (buf);
+    }
+  }
 
   if (check_uaddr(buf)) {
     abnormal_exit();
@@ -351,7 +366,7 @@ write (void **argv, uint32_t *eax) {
 }
 
 static void
-seek (void **argv, uint32_t *eax) {
+seek (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   unsigned pos = (unsigned) argv[1];
 
@@ -364,7 +379,7 @@ seek (void **argv, uint32_t *eax) {
 }
 
 static void
-tell (void **argv, uint32_t *eax) {
+tell (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   struct file *f = thread_find_file(fd);
 
@@ -375,7 +390,7 @@ tell (void **argv, uint32_t *eax) {
 }
 
 static void
-close (void **argv, uint32_t *eax) {
+close (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   struct file *f;
 
