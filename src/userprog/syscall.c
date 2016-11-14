@@ -189,7 +189,7 @@ exec (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
-  exec_cmd_line = palloc_get_page(PAL_USER);
+  exec_cmd_line = palloc_get_page(0);
   strlcpy (exec_cmd_line, cmd_line, PGSIZE);
   *eax = process_execute(exec_cmd_line);
   palloc_free_page(exec_cmd_line);
@@ -241,7 +241,7 @@ open (void **argv, uint32_t *eax) {
     abnormal_exit();
   }
 
-  char *name = palloc_get_page(PAL_USER);
+  char *name = palloc_get_page(0);
   struct file *f;
 
   strlcpy (name, cmd_name, PGSIZE);
