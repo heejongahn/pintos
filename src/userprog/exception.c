@@ -159,8 +159,15 @@ page_fault (struct intr_frame *f)
 
   page = page_lookup (fault_addr);
 
-  if (page != NULL && not_present) {
-    success = s_page_load (page);
+  if (page != NULL) {
+    if (not_present) {
+      success = s_page_load (page);
+    } else if (write) {
+      if (lock_held_by_current_thread (&filesys_lock)) {
+        lock_release (&filesys_lock);
+      }
+      abnormal_exit();
+    }
   } else if (is_stack_access (fault_addr, f->esp)) {
     success = grow_stack(fault_addr);
   }
