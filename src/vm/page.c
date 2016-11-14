@@ -27,7 +27,7 @@ s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
     return false;
   }
 
-  printf ("s_page_insert_file at %p\n", uaddr);
+  // printf ("s_page_insert_file at %p\n", uaddr);
   page->uaddr = uaddr;
   page->location = DISK;
   page->writable = writable;
@@ -53,7 +53,7 @@ s_page_insert_zero (uint8_t *uaddr) {
     return false;
   }
 
-  printf ("s_page_insert_zero at %p\n", uaddr);
+  // printf ("s_page_insert_zero at %p\n", uaddr);
   page->uaddr = uaddr;
   page->location = ZERO;
   page->writable = true;
@@ -90,7 +90,7 @@ s_page_load_file (struct s_page *page) {
   uint32_t zero_bytes = page->file_info.zero_bytes;
   bool writable = page->writable;
 
-  printf ("s_page_load_file at %p\n", upage);
+  // printf ("s_page_load_file at %p\n", upage);
   lock_acquire(&filesys_lock);
   file_seek (file, ofs);
   lock_release(&filesys_lock);
@@ -125,7 +125,7 @@ static bool
 s_page_load_zero (struct s_page *page) {
   uint8_t *upage = page->uaddr;
 
-  printf ("s_page_load_zero at %p\n", upage);
+  // printf ("s_page_load_zero at %p\n", upage);
 
   /* Get a page of memory. */
   uint8_t *kpage = allocate_frame (upage);
