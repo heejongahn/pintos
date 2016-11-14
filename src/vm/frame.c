@@ -3,7 +3,7 @@
 #include "threads/palloc.h"
 
 void
-init_frame () {
+frame_init () {
   list_init (&frame_table);
   lock_init (&frame_lock);
 }

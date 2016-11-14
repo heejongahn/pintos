@@ -11,5 +11,5 @@ struct frame {
   struct thread *owner;
 };
 
-void init_frame (void);
+void frame_init (void);
 uint8_t *allocate_frame (uint8_t *);

@@ -102,8 +102,6 @@ thread_init (void)
   lock_init (&filesys_lock);
   list_init (&ready_list);
 
-  init_frame();
-
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
