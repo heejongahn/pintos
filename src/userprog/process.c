@@ -487,7 +487,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
         success = s_page_insert_zero (upage);
       } else {
         success = s_page_insert_file (upage, file, ofs, page_read_bytes, page_zero_bytes, writable);
-        ofs = ofs += PGSIZE;
+        ofs = ofs += page_read_bytes;
       }
 
       if (!success) {
