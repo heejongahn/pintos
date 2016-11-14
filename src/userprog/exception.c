@@ -131,7 +131,6 @@ page_fault (struct intr_frame *f)
   void *fault_addr;  /* Fault address. */
 
   bool success = false;
-  enum intr_level old_level;
   struct s_page *page;
 
   /* Obtain faulting address, the virtual address that was
@@ -155,15 +154,12 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
-  old_level = intr_disable();
   page = page_lookup (fault_addr);
 
   switch (page->location) {
     case DISK:
       success = s_page_load_file(page);
   }
-
-  intr_set_level (old_level);
 
   if (!success) {
     /* To implement virtual memory, delete the rest of the function
