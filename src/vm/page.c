@@ -1,5 +1,6 @@
 #include "threads/malloc.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #include "vm/page.h"
 #include "vm/frame.h"
@@ -89,7 +90,7 @@ page_lookup (const void *uaddr) {
   struct s_page page;
   struct hash_elem *h_elem;
 
-  page.uaddr = uaddr;
+  page.uaddr = pg_round_down (uaddr);
   h_elem = hash_find (&s_page_table, &page.h_elem);
   return h_elem != NULL ? hash_entry (h_elem, struct s_page, h_elem) : NULL;
 }
