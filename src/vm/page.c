@@ -4,6 +4,7 @@
 #include "userprog/pagedir.h"
 #include "vm/page.h"
 #include "vm/frame.h"
+#include "vm/swap.h"
 #include <stdio.h>
 
 static unsigned hash_func (const struct hash_elem *, void *);
@@ -11,6 +12,7 @@ static bool less_func (const struct hash_elem *, const struct hash_elem *, void 
 static bool install_s_page (uint8_t *, uint8_t *, bool);
 static bool s_page_load_file (struct s_page *);
 static bool s_page_load_zero (struct s_page *);
+static bool s_page_load_swap (struct s_page *);
 
 void
 s_page_init () {
@@ -97,6 +99,10 @@ s_page_load (struct s_page *page) {
     case ZERO:
       success = s_page_load_zero (page);
       break;
+    case SWAP:
+      printf ("load_swap\n");
+      success = s_page_load_swap (page);
+      break;
   }
 
   return success;
@@ -111,7 +117,6 @@ s_page_load_file (struct s_page *page) {
   uint32_t zero_bytes = page->file_info.zero_bytes;
   bool writable = page->writable;
 
-  // printf ("s_page_load_file at %p\n", upage);
   lock_acquire(&filesys_lock);
   file_seek (file, ofs);
   lock_release(&filesys_lock);
@@ -145,15 +150,33 @@ s_page_load_file (struct s_page *page) {
 static bool
 s_page_load_zero (struct s_page *page) {
   uint8_t *upage = page->uaddr;
-
-  // printf ("s_page_load_zero at %p\n", upage);
-
-  /* Get a page of memory. */
   uint8_t *kpage = frame_alloc (upage);
+
   if (kpage == NULL)
     return false;
 
   memset (kpage, 0, PGSIZE);
+
+  /* Add the page to the process's address space. */
+  if (!install_s_page (upage, kpage, true))
+    {
+      frame_free (kpage);
+      return false;
+    }
+
+  return true;
+}
+
+static bool
+s_page_load_swap (struct s_page *page) {
+  uint8_t *upage = page->uaddr;
+  uint8_t *kpage = frame_alloc (upage);
+
+  if (kpage == NULL)
+    return false;
+
+  if (!swap_in (page->swap_idx, upage))
+    return false;
 
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, true))
