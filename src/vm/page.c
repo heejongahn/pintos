@@ -30,7 +30,7 @@ s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
   }
 
   // printf ("s_page_insert_file at %p\n", uaddr);
-  page->uaddr = uaddr;
+  page->uaddr = pg_round_down (uaddr);
   page->location = DISK;
   page->writable = writable;
 
@@ -56,7 +56,7 @@ s_page_insert_zero (uint8_t *uaddr) {
   }
 
   // printf ("s_page_insert_zero at %p\n", uaddr);
-  page->uaddr = uaddr;
+  page->uaddr = pg_round_down (uaddr);
   page->location = ZERO;
   page->writable = true;
 
@@ -76,7 +76,7 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
     return false;
   }
 
-  page->uaddr = uaddr;
+  page->uaddr = pg_round_down (uaddr);
   page->location = SWAP;
   page->writable = writable;
   page->swap_idx = swap_idx;
@@ -91,6 +91,7 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
 bool
 s_page_load (struct s_page *page) {
   bool success = true;
+  printf ("loading page %p\n", page->uaddr);
 
   switch (page->location) {
     case DISK:
@@ -175,15 +176,15 @@ s_page_load_swap (struct s_page *page) {
   if (kpage == NULL)
     return false;
 
-  if (!swap_in (page->swap_idx, upage))
-    return false;
-
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, true))
     {
       frame_free (kpage);
       return false;
     }
+
+  if (!swap_in (page->swap_idx, upage))
+    return false;
 
   return true;
 }
