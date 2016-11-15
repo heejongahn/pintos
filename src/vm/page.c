@@ -96,7 +96,7 @@ s_page_load_file (struct s_page *page) {
   lock_release(&filesys_lock);
 
   /* Get a page of memory. */
-  uint8_t *kpage = allocate_frame (upage);
+  uint8_t *kpage = frame_alloc (upage);
   if (kpage == NULL)
     return false;
 
@@ -104,7 +104,7 @@ s_page_load_file (struct s_page *page) {
   /* Load this page. */
   if (file_read (file, kpage, read_bytes) != (int) read_bytes)
     {
-      free_frame (kpage);
+      frame_free (kpage);
       lock_release(&filesys_lock);
       return false;
     }
@@ -114,7 +114,7 @@ s_page_load_file (struct s_page *page) {
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, writable))
     {
-      free_frame (kpage);
+      frame_free (kpage);
       return false;
     }
 
@@ -128,7 +128,7 @@ s_page_load_zero (struct s_page *page) {
   // printf ("s_page_load_zero at %p\n", upage);
 
   /* Get a page of memory. */
-  uint8_t *kpage = allocate_frame (upage);
+  uint8_t *kpage = frame_alloc (upage);
   if (kpage == NULL)
     return false;
 
@@ -137,7 +137,7 @@ s_page_load_zero (struct s_page *page) {
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, true))
     {
-      free_frame (kpage);
+      frame_free (kpage);
       return false;
     }
 

@@ -9,7 +9,7 @@ frame_init () {
 }
 
 uint8_t *
-allocate_frame (uint8_t *upage) {
+frame_alloc (uint8_t *upage) {
   struct frame *f;
   uint8_t *kpage = palloc_get_page (PAL_USER);
 
@@ -26,7 +26,7 @@ allocate_frame (uint8_t *upage) {
 }
 
 void
-free_frame (uint8_t *kpage) {
+frame_free (uint8_t *kpage) {
   struct list_elem *curr;
   struct frame *frame;
   bool found = false;
