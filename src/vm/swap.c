@@ -34,3 +34,23 @@ swap_out (struct s_page *page) {
 
   return true;
 }
+
+bool
+swap_in (size_t swap_idx, uint8_t *uaddr) {
+  int i;
+  void *buffer;
+
+  if (!bitmap_test (swap_table, swap_idx)) {
+    return false;
+  }
+
+  bitmap_flip (swap_table, swap_idx);
+  disk_sector_t start_sector = swap_idx * SECTOR_PER_PAGE;
+
+  for (i=0; i<SECTOR_PER_PAGE; i++) {
+    buffer = uaddr + (DISK_SECTOR_SIZE / sizeof (uint8_t *));
+    disk_read (swap_disk, start_sector + i, buffer);
+  }
+
+  return true;
+}
