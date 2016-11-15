@@ -3,6 +3,7 @@
 
 static struct disk *swap_disk;
 static struct bitmap *swap_table;
+static struct lock swap_lock;
 
 void swap_init (void);
 
