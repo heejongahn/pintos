@@ -59,6 +59,11 @@ check_uaddr (void *uaddr) {
   }
 
   if (!pagedir_get_page(thread_current()->pagedir, uaddr)) {
+    if (page_lookup (uaddr)) {
+      s_page_load (page_lookup (uaddr));
+      return false;
+    }
+
     return true;
   }
 
@@ -257,6 +262,7 @@ open (void **argv, uint32_t *eax, uint32_t *esp) {
   } else {
     *eax = (f->fd);
   }
+
   palloc_free_page (name);
   return;
 }
@@ -281,6 +287,12 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
   struct file *f;
   char c;
+
+  int remaining = size;
+  void *page_buffer = buffer;
+
+  int read_bytes;
+  struct frame *frame;
 
   if (fd == 0) {
     for (i; i<size; i++) {
@@ -318,11 +330,26 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
     abnormal_exit();
   }
 
-  lock_acquire(&filesys_lock);
-  frame_pin (pagedir_get_page (thread_current()->pagedir, buffer));
-  *eax = file_read(f, buffer, size);
-  frame_unpin (pagedir_get_page (thread_current()->pagedir, buffer));
-  lock_release(&filesys_lock);
+  *eax = 0;
+  while (remaining > 0) {
+    read_bytes = ((remaining - 1) % PGSIZE) + 1;
+
+    if (page_lookup (page_buffer)) {
+      s_page_load (page_lookup (page_buffer));
+    }
+
+    frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
+
+    frame_pin (frame);
+    lock_acquire(&filesys_lock);
+    file_read (f, buffer, read_bytes);
+    lock_release(&filesys_lock);
+    frame_unpin(frame);
+
+    remaining -= PGSIZE;
+    page_buffer = (unsigned) page_buffer + PGSIZE;
+    *eax = *eax + read_bytes;
+  }
 
   return;
 }
@@ -358,6 +385,14 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
 
   if (!f) {
     abnormal_exit();
+  }
+
+  if (!pagedir_get_page (thread_current()->pagedir, buf)) {
+    s_page_load (page_lookup(buf));
+  }
+
+  if (!pagedir_get_page (thread_current()->pagedir, (unsigned) buf + size)) {
+    s_page_load (page_lookup((unsigned) buf + size));
   }
 
   lock_acquire(&filesys_lock);
