@@ -42,10 +42,17 @@ frame_alloc (uint8_t *upage) {
  */
 uint8_t *
 frame_evict () {
-  struct frame *f = find_victim ();
-  struct thread *t = f->owner;
+  struct frame *f = find_victim();
+  struct thread *t;
+  struct s_page *page;
 
-  struct s_page *page = page_lookup (f->upage);
+  while (f == NULL) {
+    f = find_victim ();
+  }
+
+  t = f->owner;
+
+  page = page_lookup (f->upage);
 
   if (page == NULL) {
     printf ("no such page\n");
@@ -83,7 +90,20 @@ frame_free (uint8_t *kpage) {
 struct frame *
 find_victim () {
   struct list_elem *e = list_rbegin (&frame_table);
-  return list_entry (e, struct frame, elem);
+  struct frame* victim = list_entry (e, struct frame, elem);
+
+  /* Second chance */
+  uint32_t *pd = (victim->owner)->pagedir;
+  void *page = victim->upage;
+
+  if (pagedir_is_dirty (pd, page) || victim->pinned) {
+    list_remove (&victim->elem);
+    list_push_front (&frame_table, &victim->elem);
+
+    victim = NULL;
+  }
+
+  return victim;
 }
 
 
