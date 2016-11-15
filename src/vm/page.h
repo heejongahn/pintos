@@ -25,7 +25,7 @@ struct s_page {
   } file_info;
 
   /* Info for swap page */
-  unsigned swap_ofs;
+  size_t swap_idx;
 
   struct hash_elem h_elem;
 };

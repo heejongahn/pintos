@@ -66,7 +66,7 @@ s_page_insert_zero (uint8_t *uaddr) {
 }
 
 bool
-s_page_insert_swap (uint8_t *uaddr, bool writable, unsigned swap_ofs) {
+s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
   struct s_page *page = malloc (sizeof (struct s_page));
   bool success;
 
@@ -77,7 +77,7 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, unsigned swap_ofs) {
   page->uaddr = uaddr;
   page->location = SWAP;
   page->writable = writable;
-  page->swap_ofs = swap_ofs;
+  page->swap_idx = swap_idx;
 
   lock_acquire(&s_page_lock);
   success = hash_insert (&s_page_table, &page->h_elem) == NULL;
