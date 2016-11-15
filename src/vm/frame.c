@@ -1,7 +1,10 @@
-#include "vm/frame.h"
+#include "threads/thread.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "userprog/pagedir.h"
 #include "userprog/syscall.h"
+#include "vm/frame.h"
+#include "vm/swap.h"
 
 void
 frame_init () {
@@ -25,12 +28,12 @@ frame_alloc (uint8_t *upage) {
     list_push_front (&frame_table, &f->elem);
   }
 
+
   return kpage;
 }
 
 void
 frame_free (uint8_t *kpage) {
-  bool found = false;
   struct frame *f = frame_find (kpage);
 
   if (f != NULL) {
@@ -41,6 +44,36 @@ frame_free (uint8_t *kpage) {
     abnormal_exit ();
   }
 }
+
+/*
+ * Evict a frame from frame table.
+ * Swap in, free frame, and clear page table in order.
+ */
+uint8_t *
+frame_evict () {
+  struct frame *f = find_victim ();
+  struct thread *t = thread_current();
+
+  // First, add evicting page to swap table
+  swap_in (page_lookup (f->upage));
+
+  // Remove from frame table
+  frame_free (f->kpage);
+
+  // Remove from page table
+  pagedir_clear_page (t->pagedir, f->upage);
+}
+
+/*
+ * Find victim frame.
+ * Currently just return the last frame
+ */
+struct frame *
+find_victim () {
+  struct list_elem *e = list_end (&frame_table);
+  return list_entry (e, struct frame, elem);
+}
+
 
 void
 frame_pin (uint8_t *kpage) {
@@ -78,5 +111,6 @@ frame_find (uint8_t *kpage) {
 
 bool
 is_frame_allocated (uint8_t *kpage) {
-  return frame_find (kpage) != NULL;
+  struct frame *f = frame_find (kpage);
+  return (f != NULL);
 }
