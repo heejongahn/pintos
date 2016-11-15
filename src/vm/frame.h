@@ -9,9 +9,14 @@ struct frame {
   uint8_t *upage;
   uint8_t *kpage;
   struct thread *owner;
+  bool pinned;
 };
 
 void frame_init (void);
 
 uint8_t *frame_alloc (uint8_t *);
 void frame_free (uint8_t *);
+void frame_pin (uint8_t *);
+void frame_unpin (uint8_t *);
+struct frame *frame_find (uint8_t *);
+bool is_frame_allocated (uint8_t *);

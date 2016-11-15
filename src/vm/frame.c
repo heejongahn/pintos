@@ -1,6 +1,7 @@
 #include "vm/frame.h"
 #include "threads/malloc.h"
 #include "threads/palloc.h"
+#include "userprog/syscall.h"
 
 void
 frame_init () {
@@ -19,6 +20,8 @@ frame_alloc (uint8_t *upage) {
     f->kpage = kpage;
     f->upage = upage;
     f->owner = thread_current();
+    f->pinned = false;
+
     list_push_front (&frame_table, &f->elem);
   }
 
@@ -27,21 +30,53 @@ frame_alloc (uint8_t *upage) {
 
 void
 frame_free (uint8_t *kpage) {
+  bool found = false;
+  struct frame *f = frame_find (kpage);
+
+  if (f != NULL) {
+    palloc_free_page (kpage);
+    list_remove (&f->elem);
+  } else {
+    printf ("Trying to free not allocated frame.\n");
+    abnormal_exit ();
+  }
+}
+
+void
+frame_pin (uint8_t *kpage) {
+  struct frame *f = frame_find (kpage);
+
+  if (f != NULL) {
+    f->pinned = true;
+  }
+}
+
+
+void
+frame_unpin (uint8_t *kpage) {
+  struct frame *f = frame_find (kpage);
+
+  if (f != NULL) {
+    f->pinned = false;
+  }
+}
+
+struct frame *
+frame_find (uint8_t *kpage) {
   struct list_elem *curr;
   struct frame *frame;
-  bool found = false;
 
   for (curr=list_begin(&frame_table); curr!=list_tail(&frame_table);
           curr=list_next(curr)) {
     frame = list_entry(curr, struct frame, elem);
     if (frame->kpage == kpage) {
-      found = true;
-      break;
+      return frame;
     }
   }
+  return NULL;
+}
 
-  if (found) {
-    palloc_free_page (kpage);
-    list_remove (curr);
-  }
+bool
+is_frame_allocated (uint8_t *kpage) {
+  return frame_find (kpage) != NULL;
 }
