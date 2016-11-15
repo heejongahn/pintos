@@ -96,7 +96,8 @@ find_victim () {
   uint32_t *pd = (victim->owner)->pagedir;
   void *page = victim->upage;
 
-  if (pagedir_is_dirty (pd, page) || victim->pinned) {
+  if (pagedir_is_accessed (pd, page) || victim->pinned) {
+    pagedir_set_accessed (pd, page, false);
     list_remove (&victim->elem);
     list_push_front (&frame_table, &victim->elem);
 
