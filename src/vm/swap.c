@@ -26,8 +26,7 @@ swap_in (size_t swap_idx, uint8_t *uaddr) {
 
   lock_acquire (&swap_lock);
   for (i=0; i<SECTOR_PER_PAGE; i++) {
-    buffer = uaddr + (DISK_SECTOR_SIZE / sizeof (uint8_t *)) * i;
-    printf ("%p\n", pg_round_down(buffer));
+    buffer = (unsigned) uaddr + DISK_SECTOR_SIZE * i;
     disk_read (swap_disk, start_sector + i, buffer);
   }
   lock_release (&swap_lock);
@@ -38,6 +37,7 @@ bool
 swap_out (struct s_page *page) {
   int i;
   void *buffer;
+  uint8_t *uaddr;
 
   // Find free swap slot
   size_t swap_idx = bitmap_scan_and_flip (swap_table, 0, 1, 0);
@@ -45,13 +45,13 @@ swap_out (struct s_page *page) {
     return false;
   }
 
+  uaddr = page->uaddr;
   // Actually writing into the disk
   disk_sector_t start_sector = swap_idx * SECTOR_PER_PAGE;
 
   lock_acquire (&swap_lock);
   for (i=0; i<SECTOR_PER_PAGE; i++) {
-    buffer = page->uaddr + (DISK_SECTOR_SIZE / sizeof (uint8_t *) * i);
-    printf ("%p\n", pg_round_down(buffer));
+    buffer = (unsigned) uaddr + DISK_SECTOR_SIZE * i;
     disk_write (swap_disk, start_sector + i, buffer);
   }
   lock_release (&swap_lock);
