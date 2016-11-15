@@ -57,6 +57,10 @@ swap_out (struct s_page *page) {
   // Add to s_page_table
   s_page_insert_swap (page->uaddr, page->writable, swap_idx);
 
+  hash_delete (&s_page_table, &page->h_elem);
+
+  printf("swap_out success\n");
+
   return true;
 }
 
