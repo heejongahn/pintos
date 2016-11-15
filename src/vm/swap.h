@@ -1,5 +1,4 @@
 #include <bitmap.h>
-#include "vm/page.h"
 #include "devices/disk.h"
 
 static struct disk *swap_disk;
