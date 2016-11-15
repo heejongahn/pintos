@@ -319,7 +319,9 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
   }
 
   lock_acquire(&filesys_lock);
+  frame_pin (pagedir_get_page (thread_current()->pagedir, buffer));
   *eax = file_read(f, buffer, size);
+  frame_unpin (pagedir_get_page (thread_current()->pagedir, buffer));
   lock_release(&filesys_lock);
 
   return;
@@ -359,7 +361,9 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
   }
 
   lock_acquire(&filesys_lock);
+  frame_pin (pagedir_get_page (thread_current()->pagedir, buf));
   *eax = file_write(f, buf, size);
+  frame_unpin (pagedir_get_page (thread_current()->pagedir, buf));
   lock_release(&filesys_lock);
 
   return;
