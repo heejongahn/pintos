@@ -26,10 +26,32 @@ frame_alloc (uint8_t *upage) {
     f->pinned = false;
 
     list_push_front (&frame_table, &f->elem);
+  } else {
+    kpage = frame_evict ();
+    f = frame_find (kpage);
+    f->upage = upage;
+    f->owner = thread_current();
   }
 
-
   return kpage;
+}
+
+/*
+ * Evict a frame from frame table.
+ * Swap in, free frame, and clear page table in order.
+ */
+uint8_t *
+frame_evict () {
+  struct frame *f = find_victim ();
+  struct thread *t = f->owner;
+
+  // First, add evicting page to swap table
+  if (!swap_out (page_lookup (f->upage))) {
+    return NULL;
+  }
+
+  // Remove from page table
+  pagedir_clear_page (t->pagedir, f->upage);
 }
 
 void
@@ -43,25 +65,6 @@ frame_free (uint8_t *kpage) {
     printf ("Trying to free not allocated frame.\n");
     abnormal_exit ();
   }
-}
-
-/*
- * Evict a frame from frame table.
- * Swap in, free frame, and clear page table in order.
- */
-uint8_t *
-frame_evict () {
-  struct frame *f = find_victim ();
-  struct thread *t = thread_current();
-
-  // First, add evicting page to swap table
-  swap_in (page_lookup (f->upage));
-
-  // Remove from frame table
-  frame_free (f->kpage);
-
-  // Remove from page table
-  pagedir_clear_page (t->pagedir, f->upage);
 }
 
 /*

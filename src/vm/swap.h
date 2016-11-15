@@ -7,7 +7,7 @@ static struct bitmap *swap_table;
 
 void swap_init (void);
 
-bool swap_in (struct s_page *);
+bool swap_out (struct s_page *);
 
 /*
 bool swap_out (uint8_t *);

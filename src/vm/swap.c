@@ -11,7 +11,7 @@ swap_init () {
 }
 
 bool
-swap_in (struct s_page *page) {
+swap_out (struct s_page *page) {
   int i;
   void *buffer;
 
