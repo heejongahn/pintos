@@ -45,13 +45,22 @@ frame_evict () {
   struct frame *f = find_victim ();
   struct thread *t = f->owner;
 
+  struct s_page *page = page_lookup (f->upage);
+
+  if (page == NULL) {
+    printf ("no such page\n");
+    return NULL;
+  }
+
   // First, add evicting page to swap table
-  if (!swap_out (page_lookup (f->upage))) {
+  if (!swap_out (page)) {
     return NULL;
   }
 
   // Remove from page table
   pagedir_clear_page (t->pagedir, f->upage);
+
+  return f->kpage;
 }
 
 void
@@ -73,7 +82,7 @@ frame_free (uint8_t *kpage) {
  */
 struct frame *
 find_victim () {
-  struct list_elem *e = list_end (&frame_table);
+  struct list_elem *e = list_rbegin (&frame_table);
   return list_entry (e, struct frame, elem);
 }
 
