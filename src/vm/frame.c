@@ -55,7 +55,6 @@ frame_evict () {
   page = page_lookup (f->upage);
 
   if (page == NULL) {
-    printf ("no such page\n");
     return NULL;
   }
 
@@ -78,7 +77,6 @@ frame_free (uint8_t *kpage) {
     palloc_free_page (kpage);
     list_remove (&f->elem);
   } else {
-    printf ("Trying to free not allocated frame.\n");
     abnormal_exit ();
   }
 }

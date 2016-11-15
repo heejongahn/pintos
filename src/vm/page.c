@@ -91,7 +91,6 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
 bool
 s_page_load (struct s_page *page) {
   bool success = true;
-  printf ("loading page %p\n", page->uaddr);
 
   switch (page->location) {
     case DISK:
@@ -101,7 +100,6 @@ s_page_load (struct s_page *page) {
       success = s_page_load_zero (page);
       break;
     case SWAP:
-      printf ("load_swap\n");
       success = s_page_load_swap (page);
       break;
   }
