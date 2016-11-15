@@ -25,6 +25,7 @@ struct s_page {
   } file_info;
 
   /* Info for swap page */
+  unsigned swap_ofs;
 
   struct hash_elem h_elem;
 };
@@ -32,6 +33,8 @@ struct s_page {
 void s_page_init (void);
 bool s_page_insert_file (uint8_t *, struct file *, off_t, uint32_t, uint32_t, bool);
 bool s_page_insert_zero (uint8_t *);
+bool s_page_insert_swap (uint8_t *, bool, unsigned);
+
 bool s_page_load (struct s_page *);
 struct s_page *page_lookup (const void *);
 
