@@ -18,6 +18,7 @@ void
 s_page_init () {
   hash_init (&s_page_table, &hash_func, &less_func, NULL);
   lock_init (&s_page_lock);
+  list_init (&mmap_list);
 }
 
 bool
@@ -91,7 +92,58 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
 bool
 s_page_delete (uint8_t *uaddr) {
   struct s_page *page = page_lookup (uaddr);
-  success = (hash_delete (&s_page_table, &page->h_elem) != NULL);
+  return (hash_delete (&s_page_table, &page->h_elem) != NULL);
+}
+
+bool
+mmap_add (uint8_t *addr, struct file *f) {
+  struct mmap_info *m = malloc (sizeof (struct mmap_info));
+
+  m->addr = addr;
+  m->file = f;
+
+  list_push_front (&mmap_list, &m->elem);
+}
+
+bool
+mmap_remove (int mapid) {
+  struct list_elem *curr;
+  struct mmap_info *m;
+  bool found = false;
+  int ofs, remaining;
+
+  uint8_t *addr;
+  struct file *f;
+
+  for (curr=list_begin(&mmap_list); curr!=list_tail(&mmap_list);
+        curr=list_next(curr)) {
+    m = list_entry (curr, struct mmap_info, elem);
+    if ((m->file)->fd == mapid) {
+      f = m->file;
+      found = true;
+      break;
+    }
+  }
+
+  if (found) {
+    remaining = file_length (f);
+    addr = (m->addr);
+
+    for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
+      s_page_delete ((unsigned) addr + ofs);
+      remaining -= PGSIZE;
+    }
+
+    lock_acquire (&filesys_lock);
+    file_close (f);
+    lock_release (&filesys_lock);
+
+    free (m);
+
+    return true;
+  }
+
+  abnormal_exit();
 }
 
 bool

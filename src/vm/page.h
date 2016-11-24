@@ -10,6 +10,14 @@ enum page_location {
 
 struct hash s_page_table;
 struct lock s_page_lock;
+struct list mmap_list;
+
+struct mmap_info {
+  uint8_t *addr;
+  struct file *file;
+
+  struct list_elem elem;
+};
 
 struct s_page {
   uint8_t *uaddr;

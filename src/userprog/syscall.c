@@ -10,6 +10,7 @@
 #include "threads/synch.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
+#include "filesys/inode.h"
 #include "vm/page.h"
 
 static bool check_uaddr (void *);
@@ -19,6 +20,7 @@ static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
 static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
 typedef void (*handler) (void *, uint32_t *, uint32_t *);
+typedef int mapid_t;
 
 static void halt (void **argv, uint32_t *eax, uint32_t *esp);
 static void exit (void **argv, uint32_t *eax, uint32_t *esp);
@@ -36,7 +38,7 @@ static void close (void **argv, uint32_t *eax, uint32_t *esp);
 static void mmap (void **argv, uint32_t *eax, uint32_t *esp);
 static void munmap (void **argv, uint32_t *eax, uint32_t *esp);
 
-static handler handlers[13] = {
+static handler handlers[15] = {
   &halt,
   &exit,
   &exec,
@@ -483,11 +485,54 @@ close (void **argv, uint32_t *eax, uint32_t *esp) {
 
 static void
 mmap (void **argv, uint32_t *eax, uint32_t *esp) {
+  int fd = (int) argv[0];
+  void *addr = (void *) argv[1];
+
+  struct file *f;
+  int remaining;
+  int read_bytes;
+  off_t ofs;
+
+  if (fd < 2) {
+    abnormal_exit();
+  }
+
+  if (pg_round_down (addr) != addr) {
+    printf("pg\n");
+    abnormal_exit();
+  }
+
+  f = file_reopen (thread_find_file(fd));
+
+  lock_acquire(&filesys_lock);
+  remaining = file_length (f);
+
+  if (!remaining) {
+    file_close (f);
+    lock_release(&filesys_lock);
+    abnormal_exit();
+  }
+
+  lock_release(&filesys_lock);
+
+  for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
+    read_bytes = (remaining - ofs) > PGSIZE ? PGSIZE : remaining;
+    s_page_insert_file ((unsigned) addr + ofs, f, ofs, read_bytes, (PGSIZE - read_bytes), true);
+
+    remaining -= PGSIZE;
+  }
+
+  mmap_add (addr, f);
+  *eax = f->fd;
+
   return;
 }
 
 static void
 munmap (void **argv, uint32_t *eax, uint32_t *esp) {
+  mapid_t mapid = (mapid_t) argv[0];
+
+  mmap_remove (mapid);
   return;
 }
 
