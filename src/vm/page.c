@@ -106,44 +106,38 @@ mmap_add (uint8_t *addr, struct file *f) {
 }
 
 bool
-mmap_remove (int mapid) {
+mmap_remove (struct mmap_info *m) {
   struct list_elem *curr;
-  struct mmap_info *m;
   bool found = false;
   int ofs, remaining;
 
-  uint8_t *addr;
-  struct file *f;
+  uint8_t *addr = m->addr;
+  struct file *f = m->file;
 
-  for (curr=list_begin(&mmap_list); curr!=list_tail(&mmap_list);
-        curr=list_next(curr)) {
-    m = list_entry (curr, struct mmap_info, elem);
-    if ((m->file)->fd == mapid) {
-      f = m->file;
-      found = true;
-      break;
-    }
-  }
+  uint32_t pd = thread_current()->pagedir;
+  unsigned page_buffer;
+  int write_bytes;
 
-  if (found) {
-    remaining = file_length (f);
-    addr = (m->addr);
+  remaining = file_length (f);
 
-    for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
-      s_page_delete ((unsigned) addr + ofs);
-      remaining -= PGSIZE;
+  for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
+    page_buffer = (unsigned) addr + ofs;
+    write_bytes = remaining > PGSIZE ? PGSIZE : remaining;
+
+    if (pagedir_is_dirty (pd, page_buffer)) {
+      lock_acquire (&filesys_lock);
+      file_seek (f, ofs);
+      file_write (f, page_buffer, write_bytes);
+      lock_release (&filesys_lock);
     }
 
-    lock_acquire (&filesys_lock);
-    file_close (f);
-    lock_release (&filesys_lock);
-
-    free (m);
-
-    return true;
+    s_page_delete (page_buffer);
+    remaining -= PGSIZE;
   }
 
-  abnormal_exit();
+  lock_acquire (&filesys_lock);
+  file_close (f);
+  lock_release (&filesys_lock);
 }
 
 bool

@@ -499,7 +499,7 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
     return;
   }
 
-  if (pg_round_down (addr) != addr) {
+  if (pg_round_down (addr) != addr || !addr) {
     *eax = MAP_FAILED;
     return;
   }
@@ -545,8 +545,29 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
 static void
 munmap (void **argv, uint32_t *eax, uint32_t *esp) {
   mapid_t mapid = (mapid_t) argv[0];
+  struct mmap_info *m;
+  struct list_elem *curr;
+  struct file *f;
+  bool found = false;
 
-  mmap_remove (mapid);
+  for (curr=list_begin(&mmap_list); curr!=list_tail(&mmap_list);
+        curr=list_next(curr)) {
+    m = list_entry (curr, struct mmap_info, elem);
+    if ((m->file)->fd == mapid) {
+      f = m->file;
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    abnormal_exit ();
+  }
+
+  mmap_remove (m);
+  list_remove (&m->elem);
+  free (m);
+
   return;
 }
 

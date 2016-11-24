@@ -142,11 +142,23 @@ process_exit (void)
   struct thread *curr = thread_current ();
   uint32_t *pd;
 
+  struct list_elem *elem;
+  struct mmap_info *m;
+
+  /* munmap all mmapped files */
+  while (!list_empty (&mmap_list)) {
+    elem = list_pop_front (&mmap_list);
+    m = list_entry (elem, struct mmap_info, elem);
+    mmap_remove (m);
+    free (m);
+  }
+
   if (curr->self_file != NULL) {
     lock_acquire(&filesys_lock);
     file_close(curr->self_file);
     lock_release(&filesys_lock);
   }
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = curr->pagedir;
