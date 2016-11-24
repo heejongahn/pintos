@@ -526,7 +526,8 @@ setup_stack (void **esp, char *cmdline)
   int argc = 0;
   int i, byte_padding, token_length;
 
-  success = s_page_insert_zero ((uint8_t *) PHYS_BASE - PGSIZE);
+  s_page_insert_zero (PHYS_BASE - PGSIZE);
+  success = s_page_load ( page_lookup (PHYS_BASE - PGSIZE));
   if (success) {
     *esp = PHYS_BASE;
 
@@ -560,6 +561,8 @@ setup_stack (void **esp, char *cmdline)
     *(int *)*esp = argc;
 
     *esp = *esp - sizeof (int);
+  } else {
+    palloc_free_page (kpage);
   }
 
   palloc_free_page (argv_addr);
