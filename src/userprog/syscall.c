@@ -364,18 +364,25 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 static void
 write (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
-  char *buf = (char *)argv[1];
+  char *buffer = (char *)argv[1];
   unsigned size = (unsigned )argv[2];
   struct file *f;
 
-  if (is_stack_access ((unsigned) buf + size, esp)) {
-    grow_stack ((unsigned) buf + size);
-    if (is_stack_access (buf, esp-PGSIZE)) {
-      grow_stack (buf);
+  int remaining = size;
+  unsigned page_buffer = buffer;
+  unsigned nxt_boundary;
+
+  int write_bytes;
+  struct frame *frame;
+
+  if (is_stack_access ((unsigned) buffer + size, esp)) {
+    grow_stack ((unsigned) buffer + size);
+    if (is_stack_access (buffer, esp-PGSIZE)) {
+      grow_stack (buffer);
     }
   }
 
-  if (check_uaddr(buf)) {
+  if (check_uaddr(buffer)) {
     abnormal_exit();
   }
 
@@ -384,7 +391,7 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
   }
 
   if (fd == 1) {
-    putbuf(buf, size);
+    putbuf(buffer, size);
     return;
   }
 
@@ -394,19 +401,32 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
     abnormal_exit();
   }
 
-  if (!pagedir_get_page (thread_current()->pagedir, buf)) {
-    s_page_load (page_lookup(buf));
-  }
+  *eax = 0;
+  while (remaining > 0) {
+    if (page_buffer % PGSIZE == 0) {
+      write_bytes = remaining > PGSIZE ? PGSIZE : remaining;
+    } else {
+      nxt_boundary = pg_round_up (page_buffer);
+      write_bytes = remaining > (nxt_boundary - page_buffer) ?
+        (nxt_boundary - page_buffer) : remaining;
+    }
 
-  if (!pagedir_get_page (thread_current()->pagedir, (unsigned) buf + size)) {
-    s_page_load (page_lookup((unsigned) buf + size));
-  }
+    if (page_lookup (page_buffer)) {
+      s_page_load (page_lookup (page_buffer));
+    }
 
-  lock_acquire(&filesys_lock);
-  frame_pin (pagedir_get_page (thread_current()->pagedir, buf));
-  *eax = file_write(f, buf, size);
-  frame_unpin (pagedir_get_page (thread_current()->pagedir, buf));
-  lock_release(&filesys_lock);
+    frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
+
+    frame_pin (frame);
+    lock_acquire(&filesys_lock);
+    file_write (f, page_buffer, write_bytes);
+    lock_release(&filesys_lock);
+    frame_unpin(frame);
+
+    remaining -= write_bytes;
+    page_buffer = page_buffer + write_bytes;
+    *eax = *eax + write_bytes;
+  }
 
   return;
 }
