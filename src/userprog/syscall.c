@@ -21,6 +21,7 @@ static void put_user (const uint8_t *uaddr, void *copy_from, size_t size);
 
 typedef void (*handler) (void *, uint32_t *, uint32_t *);
 typedef int mapid_t;
+#define MAP_FAILED ((mapid_t) -1)
 
 static void halt (void **argv, uint32_t *eax, uint32_t *esp);
 static void exit (void **argv, uint32_t *eax, uint32_t *esp);
@@ -488,18 +489,25 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   int fd = (int) argv[0];
   void *addr = (void *) argv[1];
 
-  struct file *f;
+  struct file *old_file, *f;
   int remaining;
   int read_bytes;
   off_t ofs;
 
   if (fd < 2) {
-    abnormal_exit();
+    *eax = MAP_FAILED;
+    return;
   }
 
   if (pg_round_down (addr) != addr) {
-    printf("pg\n");
-    abnormal_exit();
+    *eax = MAP_FAILED;
+    return;
+  }
+
+  old_file = thread_find_file (fd);
+  if (old_file == NULL) {
+    *eax = MAP_FAILED;
+    return;
   }
 
   f = file_reopen (thread_find_file(fd));
@@ -507,15 +515,21 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   lock_acquire(&filesys_lock);
   remaining = file_length (f);
 
-  if (!remaining) {
+  if (remaining == 0) {
     file_close (f);
     lock_release(&filesys_lock);
-    abnormal_exit();
+    *eax = MAP_FAILED;
+    return;
   }
 
   lock_release(&filesys_lock);
 
   for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
+    if (page_lookup ((unsigned) addr + ofs) != NULL) {
+      *eax = MAP_FAILED;
+      return;
+    }
+
     read_bytes = (remaining - ofs) > PGSIZE ? PGSIZE : remaining;
     s_page_insert_file ((unsigned) addr + ofs, f, ofs, read_bytes, (PGSIZE - read_bytes), true);
 
