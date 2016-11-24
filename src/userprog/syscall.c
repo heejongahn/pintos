@@ -349,13 +349,12 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
     frame_pin (frame);
     lock_acquire(&filesys_lock);
-    file_read (f, page_buffer, read_bytes);
+    *eax = *eax + file_read (f, page_buffer, read_bytes);
     lock_release(&filesys_lock);
     frame_unpin(frame);
 
     remaining -= read_bytes;
     page_buffer = page_buffer + read_bytes;
-    *eax = *eax + read_bytes;
   }
 
   return;
@@ -419,13 +418,12 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
 
     frame_pin (frame);
     lock_acquire(&filesys_lock);
-    file_write (f, page_buffer, write_bytes);
+    *eax = *eax + file_write (f, page_buffer, write_bytes);
     lock_release(&filesys_lock);
     frame_unpin(frame);
 
     remaining -= write_bytes;
     page_buffer = page_buffer + write_bytes;
-    *eax = *eax + write_bytes;
   }
 
   return;
