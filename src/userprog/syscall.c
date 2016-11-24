@@ -289,7 +289,8 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
   char c;
 
   int remaining = size;
-  void *page_buffer = buffer;
+  unsigned page_buffer = buffer;
+  unsigned nxt_boundary;
 
   int read_bytes;
   struct frame *frame;
@@ -332,7 +333,13 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
   *eax = 0;
   while (remaining > 0) {
-    read_bytes = ((remaining - 1) % PGSIZE) + 1;
+    if (page_buffer % PGSIZE == 0) {
+      read_bytes = remaining > PGSIZE ? PGSIZE : remaining;
+    } else {
+      nxt_boundary = pg_round_up (page_buffer);
+      read_bytes = remaining > (nxt_boundary - page_buffer) ?
+        (nxt_boundary - page_buffer) : remaining;
+    }
 
     if (page_lookup (page_buffer)) {
       s_page_load (page_lookup (page_buffer));
@@ -342,12 +349,12 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
     frame_pin (frame);
     lock_acquire(&filesys_lock);
-    file_read (f, buffer, read_bytes);
+    file_read (f, page_buffer, read_bytes);
     lock_release(&filesys_lock);
     frame_unpin(frame);
 
-    remaining -= PGSIZE;
-    page_buffer = (unsigned) page_buffer + PGSIZE;
+    remaining -= read_bytes;
+    page_buffer = page_buffer + read_bytes;
     *eax = *eax + read_bytes;
   }
 
