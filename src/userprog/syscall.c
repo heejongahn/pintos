@@ -33,6 +33,8 @@ static void write (void **argv, uint32_t *eax, uint32_t *esp);
 static void seek (void **argv, uint32_t *eax, uint32_t *esp);
 static void tell (void **argv, uint32_t *eax, uint32_t *esp);
 static void close (void **argv, uint32_t *eax, uint32_t *esp);
+static void mmap (void **argv, uint32_t *eax, uint32_t *esp);
+static void munmap (void **argv, uint32_t *eax, uint32_t *esp);
 
 static handler handlers[13] = {
   &halt,
@@ -47,7 +49,9 @@ static handler handlers[13] = {
   &write,
   &seek,
   &tell,
-  &close
+  &close,
+  &mmap,
+  &munmap
 };
 
 /* Check and if UADDR is invalid address, return true
@@ -109,10 +113,12 @@ syscall_handler (struct intr_frame *f)
     case SYS_FILESIZE:
     case SYS_TELL:
     case SYS_CLOSE:
+    case SYS_MUNMAP:
       argc = 1;
       break;
     case SYS_CREATE:
     case SYS_SEEK:
+    case SYS_MMAP:
       argc = 2;
       break;
     case SYS_READ:
@@ -474,3 +480,14 @@ close (void **argv, uint32_t *eax, uint32_t *esp) {
 
   return;
 }
+
+static void
+mmap (void **argv, uint32_t *eax, uint32_t *esp) {
+  return;
+}
+
+static void
+munmap (void **argv, uint32_t *eax, uint32_t *esp) {
+  return;
+}
+
