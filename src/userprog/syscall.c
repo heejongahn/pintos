@@ -486,6 +486,7 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   int read_bytes;
   off_t ofs;
 
+  void *page_addr;
   uint32_t *pd = thread_current()->pagedir;
 
   if (fd < 2) {
@@ -520,13 +521,14 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   lock_release(&filesys_lock);
 
   for (ofs = 0; ofs < size; ofs += PGSIZE) {
-    if (page_lookup((unsigned) addr + ofs) != NULL) {
+    page_addr = (unsigned) addr + ofs;
+    if (page_lookup (page_addr) != NULL) {
       *eax = MAP_FAILED;
       return;
     }
 
-    read_bytes = (remaining - ofs) > PGSIZE ? PGSIZE : remaining;
-    s_page_insert_file ((unsigned) addr + ofs, f, ofs, read_bytes, (PGSIZE - read_bytes), true);
+    read_bytes = remaining > PGSIZE ? PGSIZE : remaining;
+    s_page_insert_file (page_addr, f, ofs, read_bytes, (PGSIZE - read_bytes), true);
 
     remaining -= PGSIZE;
   }
