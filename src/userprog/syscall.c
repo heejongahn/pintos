@@ -482,9 +482,11 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   void *addr = (void *) argv[1];
 
   struct file *old_file, *f;
-  int remaining;
+  int remaining, size;
   int read_bytes;
   off_t ofs;
+
+  uint32_t *pd = thread_current()->pagedir;
 
   if (fd < 2) {
     *eax = MAP_FAILED;
@@ -505,7 +507,8 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
   f = file_reopen (thread_find_file(fd));
 
   lock_acquire(&filesys_lock);
-  remaining = file_length (f);
+  size = file_length (f);
+  remaining = size;
 
   if (remaining == 0) {
     file_close (f);
@@ -516,8 +519,8 @@ mmap (void **argv, uint32_t *eax, uint32_t *esp) {
 
   lock_release(&filesys_lock);
 
-  for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
-    if (page_lookup ((unsigned) addr + ofs) != NULL) {
+  for (ofs = 0; ofs < size; ofs += PGSIZE) {
+    if (page_lookup((unsigned) addr + ofs) != NULL) {
       *eax = MAP_FAILED;
       return;
     }
