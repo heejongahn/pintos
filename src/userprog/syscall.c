@@ -330,10 +330,6 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
     }
   }
 
-  if (check_uaddr(buffer)) {
-    abnormal_exit();
-  }
-
   f = thread_find_file(fd);
 
   if (!f) {
@@ -342,16 +338,16 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
   *eax = 0;
   while (remaining > 0) {
+    if (check_uaddr(buffer)) {
+      abnormal_exit();
+    }
+
     if (page_buffer % PGSIZE == 0) {
       read_bytes = remaining > PGSIZE ? PGSIZE : remaining;
     } else {
       nxt_boundary = pg_round_up (page_buffer);
       read_bytes = remaining > (nxt_boundary - page_buffer) ?
         (nxt_boundary - page_buffer) : remaining;
-    }
-
-    if (page_lookup (page_buffer)) {
-      s_page_load (page_lookup (page_buffer));
     }
 
     frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
@@ -390,10 +386,6 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
     }
   }
 
-  if (check_uaddr(buffer)) {
-    abnormal_exit();
-  }
-
   if (fd == 0) {
     abnormal_exit();
   }
@@ -411,16 +403,16 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
 
   *eax = 0;
   while (remaining > 0) {
+    if (check_uaddr (page_buffer)) {
+      abnormal_exit();
+    }
+
     if (page_buffer % PGSIZE == 0) {
       write_bytes = remaining > PGSIZE ? PGSIZE : remaining;
     } else {
       nxt_boundary = pg_round_up (page_buffer);
       write_bytes = remaining > (nxt_boundary - page_buffer) ?
         (nxt_boundary - page_buffer) : remaining;
-    }
-
-    if (page_lookup (page_buffer)) {
-      s_page_load (page_lookup (page_buffer));
     }
 
     frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
