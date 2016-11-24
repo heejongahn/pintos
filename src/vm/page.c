@@ -89,6 +89,12 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
 }
 
 bool
+s_page_delete (uint8_t *uaddr) {
+  struct s_page *page = page_lookup (uaddr);
+  success = (hash_delete (&s_page_table, &page->h_elem) != NULL);
+}
+
+bool
 s_page_load (struct s_page *page) {
   bool success = true;
 
