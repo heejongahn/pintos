@@ -14,6 +14,7 @@
 #include "vm/page.h"
 
 static bool check_uaddr (void *);
+static void **syscall_esp;
 
 static void syscall_handler (struct intr_frame *);
 static void get_user (const uint8_t *uaddr, void *save_to, size_t size);
@@ -71,6 +72,12 @@ check_uaddr (void *uaddr) {
       return false;
     }
 
+    if (is_stack_access (uaddr, syscall_esp)) {
+      grow_stack (uaddr);
+      syscall_esp = uaddr;
+      return false;
+    }
+
     return true;
   }
 
@@ -98,6 +105,8 @@ syscall_handler (struct intr_frame *f)
   uint32_t syscall_nr;
   int argc, i;
   void *argv[3];
+
+  syscall_esp = f->esp;
 
   uint32_t *saved_esp = esp;
 
@@ -322,14 +331,6 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
     abnormal_exit();
   }
 
-  if (is_stack_access ((unsigned) buffer + size, esp)) {
-    grow_stack ((unsigned) buffer + size);
-
-    if (is_stack_access (buffer, esp-PGSIZE)) {
-      grow_stack (buffer);
-    }
-  }
-
   f = thread_find_file(fd);
 
   if (!f) {
@@ -338,7 +339,7 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
 
   *eax = 0;
   while (remaining > 0) {
-    if (check_uaddr(buffer)) {
+    if (check_uaddr(page_buffer)) {
       abnormal_exit();
     }
 
@@ -378,13 +379,6 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
 
   int write_bytes;
   struct frame *frame;
-
-  if (is_stack_access ((unsigned) buffer + size, esp)) {
-    grow_stack ((unsigned) buffer + size);
-    if (is_stack_access (buffer, esp-PGSIZE)) {
-      grow_stack (buffer);
-    }
-  }
 
   if (fd == 0) {
     abnormal_exit();

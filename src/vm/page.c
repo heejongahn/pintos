@@ -7,6 +7,8 @@
 #include "vm/swap.h"
 #include <stdio.h>
 
+#define MAX_STACK_SIZE 0x800000
+
 static unsigned hash_func (const struct hash_elem *, void *);
 static bool less_func (const struct hash_elem *, const struct hash_elem *, void *);
 static bool install_s_page (uint8_t *, uint8_t *, bool);
@@ -278,11 +280,15 @@ less_func (const struct hash_elem *a, const struct hash_elem *b, void *aux) {
 
 bool
 is_stack_access (void *addr, void *esp) {
-  return (esp - 32 <= addr) && is_user_vaddr(addr);
+  return ((esp <= addr || addr == esp - 4 || addr == esp - 32) && (PHYS_BASE - MAX_STACK_SIZE <= addr && addr < PHYS_BASE));
 }
 
 bool
 grow_stack (void *addr) {
-  s_page_insert_zero(pg_round_down(addr));
-  return s_page_load (page_lookup (addr));
+  if (pagedir_get_page (thread_current()->pagedir, addr) == NULL) {
+    s_page_insert_zero(pg_round_down(addr));
+    return s_page_load (page_lookup (addr));
+  }
+
+  return true;
 }
