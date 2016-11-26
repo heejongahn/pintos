@@ -20,6 +20,7 @@
 #include "threads/vaddr.h"
 #include "vm/frame.h"
 #include "vm/page.h"
+#include "vm/swap.h"
 
 static struct semaphore load_sema;
 static struct semaphore success_sema;
@@ -157,6 +158,15 @@ process_exit (void)
     lock_acquire(&filesys_lock);
     file_close(curr->self_file);
     lock_release(&filesys_lock);
+  }
+
+
+  if (lock_held_by_current_thread (&frame_lock)) {
+    lock_release (&frame_lock);
+  }
+
+  if (lock_held_by_current_thread (&swap_lock)) {
+    lock_release (&swap_lock);
   }
 
   /* Destroy the current process's page directory and switch back
