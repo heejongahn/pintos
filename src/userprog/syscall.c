@@ -343,6 +343,7 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
       abnormal_exit();
     }
 
+    lock_acquire(&filesys_lock);
     if (page_buffer % PGSIZE == 0) {
       read_bytes = remaining > PGSIZE ? PGSIZE : remaining;
     } else {
@@ -354,13 +355,12 @@ read (void **argv, uint32_t *eax, uint32_t *esp) {
     frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
 
     frame_pin (frame);
-    lock_acquire(&filesys_lock);
     *eax = *eax + file_read (f, page_buffer, read_bytes);
-    lock_release(&filesys_lock);
     frame_unpin(frame);
 
     remaining -= read_bytes;
     page_buffer = page_buffer + read_bytes;
+    lock_release(&filesys_lock);
   }
 
   return;
@@ -401,6 +401,7 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
       abnormal_exit();
     }
 
+    lock_acquire(&filesys_lock);
     if (page_buffer % PGSIZE == 0) {
       write_bytes = remaining > PGSIZE ? PGSIZE : remaining;
     } else {
@@ -412,13 +413,12 @@ write (void **argv, uint32_t *eax, uint32_t *esp) {
     frame = frame_find (pagedir_get_page (thread_current()->pagedir, page_buffer));
 
     frame_pin (frame);
-    lock_acquire(&filesys_lock);
     *eax = *eax + file_write (f, page_buffer, write_bytes);
-    lock_release(&filesys_lock);
     frame_unpin(frame);
 
     remaining -= write_bytes;
     page_buffer = page_buffer + write_bytes;
+    lock_release(&filesys_lock);
   }
 
   return;

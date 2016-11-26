@@ -15,7 +15,10 @@ frame_init () {
 uint8_t *
 frame_alloc (uint8_t *upage) {
   struct frame *f;
-  uint8_t *kpage = palloc_get_page (PAL_USER);
+  uint8_t *kpage;
+
+  lock_acquire (&frame_lock);
+  kpage = palloc_get_page (PAL_USER);
 
   if (kpage != NULL) {
     f = malloc (sizeof (struct frame));
@@ -33,6 +36,7 @@ frame_alloc (uint8_t *upage) {
     f->owner = thread_current();
   }
 
+  lock_release (&frame_lock);
   return kpage;
 }
 
@@ -65,20 +69,24 @@ frame_evict () {
 
   // Remove from page table
   pagedir_clear_page (t->pagedir, f->upage);
-
   return f->kpage;
 }
 
 void
 frame_free (uint8_t *kpage) {
   struct frame *f = frame_find (kpage);
+  lock_acquire (&frame_lock);
 
   if (f != NULL) {
     palloc_free_page (kpage);
+    pagedir_clear_page ((f->owner)->pagedir, f->upage);
     list_remove (&f->elem);
   } else {
+    lock_release (&frame_lock);
     abnormal_exit ();
   }
+
+  lock_release (&frame_lock);
 }
 
 /*
@@ -98,7 +106,6 @@ find_victim () {
     pagedir_set_accessed (pd, page, false);
     list_remove (&victim->elem);
     list_push_front (&frame_table, &victim->elem);
-
     victim = NULL;
   }
 
@@ -109,20 +116,25 @@ find_victim () {
 void
 frame_pin (uint8_t *kpage) {
   struct frame *f = frame_find (kpage);
+  lock_acquire (&frame_lock);
 
   if (f != NULL) {
     f->pinned = true;
   }
+  lock_release (&frame_lock);
 }
 
 
 void
 frame_unpin (uint8_t *kpage) {
   struct frame *f = frame_find (kpage);
+  lock_acquire (&frame_lock);
 
   if (f != NULL) {
     f->pinned = false;
   }
+
+  lock_release (&frame_lock);
 }
 
 struct frame *

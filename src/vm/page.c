@@ -19,7 +19,6 @@ static bool s_page_load_swap (struct s_page *);
 void
 s_page_init () {
   hash_init (&s_page_table, &hash_func, &less_func, NULL);
-  lock_init (&s_page_lock);
   list_init (&mmap_list);
 }
 
@@ -42,9 +41,7 @@ s_page_insert_file (uint8_t *uaddr, struct file *file, off_t ofs,
   page->file_info.read_bytes = read_bytes;
   page->file_info.zero_bytes = zero_bytes;
 
-  lock_acquire(&s_page_lock);
   success = hash_insert (&s_page_table, &page->h_elem) == NULL;
-  lock_release(&s_page_lock);
 
   return success;
 }
@@ -63,9 +60,7 @@ s_page_insert_zero (uint8_t *uaddr) {
   page->location = ZERO;
   page->writable = true;
 
-  lock_acquire(&s_page_lock);
   success = hash_insert (&s_page_table, &page->h_elem) == NULL;
-  lock_release(&s_page_lock);
 
   return success;
 }
@@ -84,9 +79,7 @@ s_page_insert_swap (uint8_t *uaddr, bool writable, size_t swap_idx) {
   page->writable = writable;
   page->swap_idx = swap_idx;
 
-  lock_acquire(&s_page_lock);
   success = hash_insert (&s_page_table, &page->h_elem) == NULL;
-  lock_release(&s_page_lock);
 
   return success;
 }
@@ -96,9 +89,7 @@ s_page_delete (uint8_t *uaddr) {
   struct s_page *page = page_lookup (uaddr);
   bool success;
 
-  lock_acquire (&s_page_lock);
   success = (hash_delete (&s_page_table, &page->h_elem) != NULL);
-  lock_release (&s_page_lock);
 
   return success;
 }
@@ -128,22 +119,20 @@ mmap_remove (struct mmap_info *m) {
 
   remaining = file_length (f);
 
+  lock_acquire (&filesys_lock);
   for (ofs = 0; ofs < remaining; ofs += PGSIZE) {
     page_buffer = (unsigned) addr + ofs;
     write_bytes = remaining > PGSIZE ? PGSIZE : remaining;
 
     if (pagedir_is_dirty (pd, page_buffer)) {
-      lock_acquire (&filesys_lock);
       file_seek (f, ofs);
       file_write (f, page_buffer, write_bytes);
-      lock_release (&filesys_lock);
     }
 
     s_page_delete (page_buffer);
     remaining -= PGSIZE;
   }
 
-  lock_acquire (&filesys_lock);
   file_close (f);
   lock_release (&filesys_lock);
 }
@@ -176,16 +165,14 @@ s_page_load_file (struct s_page *page) {
   uint32_t zero_bytes = page->file_info.zero_bytes;
   bool writable = page->writable;
 
-  lock_acquire(&filesys_lock);
-  file_seek (file, ofs);
-  lock_release(&filesys_lock);
-
   /* Get a page of memory. */
   uint8_t *kpage = frame_alloc (upage);
   if (kpage == NULL)
     return false;
 
   lock_acquire(&filesys_lock);
+  file_seek (file, ofs);
+
   /* Load this page. */
   if (file_read (file, kpage, read_bytes) != (int) read_bytes)
     {
@@ -193,9 +180,9 @@ s_page_load_file (struct s_page *page) {
       lock_release(&filesys_lock);
       return false;
     }
-  lock_release(&filesys_lock);
   memset (kpage + read_bytes, 0, zero_bytes);
 
+  lock_release(&filesys_lock);
   /* Add the page to the process's address space. */
   if (!install_s_page (upage, kpage, writable))
     {

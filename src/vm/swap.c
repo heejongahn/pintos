@@ -54,14 +54,12 @@ swap_out (struct s_page *page) {
     buffer = (unsigned) uaddr + DISK_SECTOR_SIZE * i;
     disk_write (swap_disk, start_sector + i, buffer);
   }
-  lock_release (&swap_lock);
 
   // Add to s_page_table
-  lock_acquire (&s_page_lock);
   hash_delete (&s_page_table, &page->h_elem);
-  lock_release (&s_page_lock);
   s_page_insert_swap (page->uaddr, page->writable, swap_idx);
 
+  lock_release (&swap_lock);
   return true;
 }
 
