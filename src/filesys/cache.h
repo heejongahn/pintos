@@ -10,3 +10,5 @@ struct bcache_elem {
 };
 
 void bcache_init (void);
+
+struct bcache_elem *bcache_find_empty (void);
