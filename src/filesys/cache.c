@@ -7,7 +7,12 @@ static struct bcache_elem bcache[BUFFER_CACHE_SIZE];
 
 void
 bcache_init () {
+  int i = 0;
+
   lock_init (&bcache_lock);
+  for (i=0; i++; i<BUFFER_CACHE_SIZE) {
+    bcache[i].valid = false;
+  }
 }
 
 // Find empty bcache. If none is available, return NULL.
